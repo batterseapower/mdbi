@@ -8,7 +8,7 @@ public class Context {
         context.register(Integer.class, Write.INTEGER, Read.INTEGER);
         context.register(String.class, Write.STRING, Read.STRING);
 
-        // FIXME: register default stuff
+        // FIXME: register more default stuff
         return context;
     }
 

@@ -5,7 +5,9 @@ import org.junit.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -78,5 +80,20 @@ public class MJDBCTest {
         final Object[] matrix = m.query(SQL.of("select id, name from person"), new MatrixBatchRead(int.class, String.class));
         assertArrayEquals(new int[] { 1, 2 }, (int[])matrix[0]);
         assertArrayEquals(new String[] { "Max", "John" }, (String[])matrix[1]);
+    }
+
+    @Test
+    public void update() throws SQLException {
+        assertEquals(0L, m.update(SQL.of("update person set id = id + 1")));
+        m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
+        assertEquals(1L, m.update(SQL.of("update person set id = id + 1")));
+    }
+
+    @Test
+    public void updateBatch() throws SQLException {
+        final List<Integer> ids = Arrays.asList(1, 2);
+        final List<String> names = Arrays.asList("Max", "John");
+        m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
+        assertEquals(Arrays.asList("1Max", "2John"), m.queryList(SQL.of("select id || name from person order by id"), String.class));
     }
 }

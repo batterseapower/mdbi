@@ -1,12 +1,9 @@
 import java.lang.reflect.Array;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MatrixBatchRead implements BatchRead<Object[]> {
@@ -47,6 +44,7 @@ public class MatrixBatchRead implements BatchRead<Object[]> {
         }).get(ctxt, ps);
     }
 
+    // FIXME: support other primitives
     private static Object listToArray(Class<?> klass, List list) {
         if (klass == int.class) {
             final int[] result = new int[list.size()];

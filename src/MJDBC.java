@@ -19,6 +19,34 @@ public class MJDBC {
         });
     }
 
+    // FIXME: test batch updates
+    public long[] updateBatch(SQL sql) throws SQLException {
+        final BatchSQLBuilder builder = new BatchSQLBuilder(context.writers);
+        builder.visitSQL(sql);
+        try (final PreparedStatement ps = builder.build(connection)) {
+            try {
+                return ps.executeLargeBatch();
+            } catch (UnsupportedOperationException _) {
+                final int[] ints = ps.executeBatch();
+                final long[] longs = new long[ints.length];
+                for (int i = 0; i < ints.length; i++) {
+                    longs[i] = ints[i];
+                }
+                return longs;
+            }
+        }
+    }
+
+    public long update(SQL sql) throws SQLException {
+        return query(sql, (ctxt, s) -> {
+            try {
+                return s.executeLargeUpdate();
+            } catch (UnsupportedOperationException _) {
+                return (long)s.executeUpdate();
+            }
+        });
+    }
+
     public <T> List<T> queryList(SQL sql, Class<T> klass) throws SQLException {
         return queryList(sql, new ContextRead<T>(klass));
     }
