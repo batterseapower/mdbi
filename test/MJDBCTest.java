@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Collections;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 public class MJDBCTest {
@@ -67,5 +68,15 @@ public class MJDBCTest {
         m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
         final Row row = m.queryExactlyOne(SQL.of("select * from person"), Row.class);
         assertEquals("Max", row.name);
+    }
+
+    @Test
+    public void matrix() throws SQLException {
+        m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
+        m.execute(SQL.of("insert into person (id, name) values (", 2, ",", "John", ")"));
+
+        final Object[] matrix = m.query(SQL.of("select id, name from person"), new MatrixBatchRead(int.class, String.class));
+        assertArrayEquals(new int[] { 1, 2 }, (int[])matrix[0]);
+        assertArrayEquals(new String[] { "Max", "John" }, (String[])matrix[1]);
     }
 }
