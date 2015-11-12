@@ -3,6 +3,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ListBatchRead<T> implements BatchRead<List<T>> {
     private final Read<T> read;
@@ -12,13 +13,15 @@ public class ListBatchRead<T> implements BatchRead<List<T>> {
     }
 
     @Override
-    public List<T> get(PreparedStatement ps) throws SQLException {
-        return ResultSetBatchRead.adapt(rs -> {
+    public List<T> get(Read.Map ctxt, PreparedStatement ps) throws SQLException {
+        return ResultSetBatchRead.adapt((ctxt2, rs) -> {
+            final BoundRead<T> boundRead = read.bind(ctxt2);
+
             final List<T> result = new ArrayList<>();
             while (rs.next()) {
-                result.add(read.get(rs, new IndexRef()));
+                result.add(boundRead.get(rs, new IndexRef()));
             }
             return result;
-        }).get(ps);
+        }).get(ctxt, ps);
     }
 }

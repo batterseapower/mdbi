@@ -5,7 +5,6 @@ import org.junit.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
@@ -20,6 +19,8 @@ public class MJDBCTest {
         ctxt = Context.createDefault();
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
         m = new MJDBC(ctxt, conn);
+
+        m.execute(SQL.of("create table person (id integer, name string)"));
     }
 
     @After
@@ -29,12 +30,29 @@ public class MJDBCTest {
 
     @Test
     public void simple() throws SQLException {
-        m.execute(SQL.of("create table person (id integer, name string)"));
         m.execute(SQL.of("insert into person (id, name) values (1, 'Max')"));
         m.execute(SQL.of("insert into person (id, name) values (2, ", "John", ")"));
         assertEquals(Collections.singletonList("Max"),
                      m.queryList(SQL.of("select name from person where id = 1"), String.class));
         assertEquals(Collections.singletonList("John"),
                      m.queryList(SQL.of("select name from person where id = 2"), String.class));
+    }
+
+    public static class Row {
+        public final int id;
+        public final String name;
+
+        public Row(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    @Test
+    public void tuple() throws SQLException {
+        m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
+        final Row row = m.queryExactlyOne(SQL.of("select * from person"), new TupleRead<>(Row.class));
+        assertEquals(1, row.id);
+        assertEquals("Max", row.name);
     }
 }

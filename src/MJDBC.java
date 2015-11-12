@@ -13,25 +13,36 @@ public class MJDBC {
     }
 
     public void execute(SQL sql) throws SQLException {
-        query(sql, new BatchRead<Void>() {
-            public Void get(PreparedStatement s) throws SQLException {
-                s.execute();
-                return null;
-            }
+        query(sql, (ctxt, s) -> {
+            s.execute();
+            return null;
         });
     }
 
     public <T> List<T> queryList(SQL sql, Class<T> klass) throws SQLException {
-        return query(sql, new ListBatchRead<T>(context.readers.get(klass)));
+        return queryList(sql, new ContextRead<T>(klass));
+    }
+
+    public <T> List<T> queryList(SQL sql, Read<T> read) throws SQLException {
+        return query(sql, new ListBatchRead<T>(read));
+    }
+
+    public <T> T queryExactlyOne(SQL sql, Class<T> klass) throws SQLException {
+        return queryExactlyOne(sql, new ContextRead<>(klass));
+    }
+
+    public <T> T queryExactlyOne(SQL sql, Read<T> read) throws SQLException {
+        return query(sql, new ExactlyOneBatchRead<T>(read));
     }
 
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
         // FIXME: support no preparedstatement
         // FIXME: transactions
+        // FIXME: retry deadlocks
         final SQLBuilder builder = new SQLBuilder(context.writers);
         builder.visitSQL(sql);
         try (final PreparedStatement ps = builder.build(connection)) {
-            return batchRead.get(ps);
+            return batchRead.get(context.readers, ps);
         }
     }
 }

@@ -38,11 +38,7 @@ class SQLBuilder {
             } else {
                 final Class<?> klass = arg.getClass();
                 final Write<?> write = wm.get(klass);
-                if (write == null) {
-                    throw new IllegalArgumentException("Don't know how to transfer " + klass + " objects to JDBC");
-                } else {
-                    actions.add((stmt, ref) -> ((Write<Object>)write).set(stmt, ref, arg));
-                }
+                actions.add((stmt, ref) -> ((Write<Object>)write).bind(wm).set(stmt, ref, arg));
             }
         }
     }

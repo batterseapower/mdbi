@@ -12,10 +12,12 @@ public interface Read<T> {
         }
 
         @Override
-        public Integer get(ResultSet rs, IndexRef ix) throws SQLException {
-            final int result = rs.getInt(ix.x++);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
-            return result;
+        public BoundRead<Integer> bind(Read.Map ctxt) {
+            return (rs, ix) -> {
+                final int result = rs.getInt(ix.x++);
+                if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+                return result;
+            };
         }
     };
     Read<Integer> INTEGER = new Read<Integer>() {
@@ -25,10 +27,12 @@ public interface Read<T> {
         }
 
         @Override
-        public Integer get(ResultSet rs, IndexRef ix) throws SQLException {
-            final int result = rs.getInt(ix.x++);
-            if (rs.wasNull()) return null;
-            return result;
+        public BoundRead<Integer> bind(Read.Map ctxt) {
+            return (rs, ix) -> {
+                final int result = rs.getInt(ix.x++);
+                if (rs.wasNull()) return null;
+                return result;
+            };
         }
     };
     Read<String> STRING = new Read<String>() {
@@ -38,8 +42,8 @@ public interface Read<T> {
         }
 
         @Override
-        public String get(ResultSet rs, IndexRef ix) throws SQLException {
-            return rs.getString(ix.x++);
+        public BoundRead<String> bind(Read.Map ctxt) {
+            return (rs, ix) -> rs.getString(ix.x++);
         }
     };
 
@@ -52,11 +56,16 @@ public interface Read<T> {
 
         @SuppressWarnings("unchecked")
         public <T> Read<T> get(Class<T> klass) {
-            return (Read<T>)map.get(klass);
+            final Read<T> result = (Read<T>) map.get(klass);
+            if (result == null) {
+                throw new IllegalArgumentException("Don't know how to transfer " + klass + " objects from JDBC");
+            } else {
+                return result;
+            }
         }
     }
 
     Class<T> getElementClass();
 
-    T get(ResultSet rs, IndexRef ix) throws SQLException;
+    BoundRead<T> bind(Read.Map ctxt);
 }

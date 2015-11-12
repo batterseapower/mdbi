@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 public class MatrixBatchRead implements BatchRead<Object[]> {
     private final List<Read<?>> reads;
 
-    public MatrixBatchRead(Context ctxt, Class<?>... klasses) {
-        this(Arrays.asList(klasses).stream().map((Function<Class<?>, Read<?>>) ctxt.readers::get).collect(Collectors.toList()));
+    public MatrixBatchRead(Class<?>... klasses) {
+        this(Arrays.asList(klasses).stream().map(ContextRead::new).collect(Collectors.toList()));
     }
 
     public MatrixBatchRead(List<Read<?>> reads) {
@@ -21,32 +21,30 @@ public class MatrixBatchRead implements BatchRead<Object[]> {
     }
 
     @Override
-    public Object[] get(PreparedStatement ps) throws SQLException {
-        return ResultSetBatchRead.adapt(new ResultSetBatchRead<Object[]>() {
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object[] get(ResultSet rs) throws SQLException {
-                final List[] columnLists = new List[reads.size()];
-                for (int i = 0; i < columnLists.length; i++) {
-                    columnLists[i] = new ArrayList<>();
-                }
+    public Object[] get(Read.Map ctxt, PreparedStatement ps) throws SQLException {
+        return ResultSetBatchRead.adapt((ctxt1, rs) -> {
+            final List<BoundRead<?>> boundReads = reads.stream().map(read -> read.bind(ctxt1)).collect(Collectors.toList());
 
-                while (rs.next()) {
-                    final IndexRef ix = new IndexRef();
-                    for (int i = 0; i < columnLists.length; i++) {
-                        columnLists[i].add(reads.get(i).get(rs, ix));
-                    }
-                }
-
-                final Object[] columns = new Object[columnLists.length];
-                for (int i = 0; i < columnLists.length; i++) {
-                    final List list = columnLists[i];
-                    columns[i] = listToArray(reads.get(i).getElementClass(), list);
-                }
-
-                return columns;
+            final List[] columnLists = new List[reads.size()];
+            for (int i = 0; i < columnLists.length; i++) {
+                columnLists[i] = new ArrayList<>();
             }
-        }).get(ps);
+
+            while (rs.next()) {
+                final IndexRef ix = new IndexRef();
+                for (int i = 0; i < columnLists.length; i++) {
+                    columnLists[i].add(boundReads.get(i).get(rs, ix));
+                }
+            }
+
+            final Object[] columns = new Object[columnLists.length];
+            for (int i = 0; i < columnLists.length; i++) {
+                final List list = columnLists[i];
+                columns[i] = listToArray(reads.get(i).getElementClass(), list);
+            }
+
+            return columns;
+        }).get(ctxt, ps);
     }
 
     private static Object listToArray(Class<?> klass, List list) {

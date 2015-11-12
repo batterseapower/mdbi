@@ -5,30 +5,19 @@ import java.sql.Types;
 import java.util.HashMap;
 
 interface Write<T> {
-    Write<Integer> INT = new Write<Integer>() {
-        @Override
-        public void set(PreparedStatement s, IndexRef ix, Integer x) throws SQLException {
-            s.setInt(ix.x++, x.intValue());
+    Write<Integer> INT = ctxt -> (s, ix, x) -> s.setInt(ix.x++, x.intValue());
+    Write<Integer> INTEGER = ctxt -> (s, ix, x) -> {
+        if (x == null) {
+            s.setNull(ix.x++, Types.INTEGER);
+        } else {
+            s.setInt(ix.x++, x);
         }
     };
-    Write<Integer> INTEGER = new Write<Integer>() {
-        @Override
-        public void set(PreparedStatement s, IndexRef ix, Integer x) throws SQLException {
-            if (x == null) {
-                s.setNull(ix.x++, Types.INTEGER);
-            } else {
-                s.setInt(ix.x++, x);
-            }
-        }
-    };
-    Write<String> STRING = new Write<String>() {
-        @Override
-        public void set(PreparedStatement s, IndexRef ix, String x) throws SQLException {
-            if (x == null) {
-                s.setNull(ix.x++, Types.VARCHAR);
-            } else {
-                s.setString(ix.x++, x);
-            }
+    Write<String> STRING = ctxt -> (s, ix, x) -> {
+        if (x == null) {
+            s.setNull(ix.x++, Types.VARCHAR);
+        } else {
+            s.setString(ix.x++, x);
         }
     };
 
@@ -41,9 +30,14 @@ interface Write<T> {
 
         @SuppressWarnings("unchecked")
         public <T> Write<T> get(Class<T> klass) {
-            return (Write<T>)map.get(klass);
+            final Write<T> result = (Write<T>) map.get(klass);
+            if (result == null) {
+                throw new IllegalArgumentException("Don't know how to transfer " + klass + " objects to JDBC");
+            } else {
+                return result;
+            }
         }
     }
 
-    void set(PreparedStatement s, IndexRef ix, T x) throws SQLException;
+    BoundWrite<T> bind(Write.Map ctxt);
 }
