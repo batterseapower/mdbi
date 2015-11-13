@@ -40,8 +40,13 @@ public class MJDBC {
     private final boolean prepared;
     private final Supplier<Retry> retryPolicy;
 
+    // FIXME: in clauses
     // FIXME: transactions
     // FIXME: retry deadlocks
+    //   What about if we execute these 3 against conn sequentialy:
+    //     update tab set x = 1
+    //     begin tran; update tab set x = 2
+    //     select x from tab  // <-- if this deadlocks then the rollback causes the update to be lost. If we just retry this statement we'll return 1 (unexpected).
     public MJDBC(Context context, Connection connection) {
         this(context, ConnectionObtainer.fromConnection(connection));
     }
