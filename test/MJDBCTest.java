@@ -86,8 +86,6 @@ public class MJDBCTest {
         assertArrayEquals(new String[] { "Max", "John" }, (String[])matrix[1]);
     }
 
-    // FIXME: test more unprepared string escaping scenarios
-
     @Test
     public void unprepared() throws SQLException {
         // It's useful to have access to unprepared statements when working with e.g. MS SQL Server, where temp tables

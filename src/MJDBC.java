@@ -41,7 +41,6 @@ public class MJDBC {
     private final Supplier<Retry> retryPolicy;
 
     // FIXME: in clauses
-    // FIXME: transactions
     // FIXME: retry deadlocks
     //   What about if we execute these 3 against conn sequentialy:
     //     update tab set x = 1

@@ -8,7 +8,6 @@ import java.sql.SQLException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-// FIXME: more tests
 public class TransactionallyTest {
     private Connection conn;
     private MJDBC m;
