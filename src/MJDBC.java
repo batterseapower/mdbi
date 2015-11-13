@@ -19,7 +19,6 @@ public class MJDBC {
         });
     }
 
-    // FIXME: test batch updates
     public long[] updateBatch(SQL sql) throws SQLException {
         final BatchSQLBuilder builder = new BatchSQLBuilder(context.writers);
         builder.visitSQL(sql);

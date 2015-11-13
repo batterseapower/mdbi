@@ -1,8 +1,4 @@
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,38 +10,16 @@ public class TupleRead<T> implements Read<T> {
 
     public TupleRead(Class<T> klass) {
         this.klass = klass;
-        this.constructor = getConstructor(klass);
+        this.constructor = Reflection.getConstructor(klass);
         this.reads = Arrays.asList(constructor.getParameterTypes()).stream().map(ContextRead::new).collect(Collectors.toList());
     }
 
     public TupleRead(Class<T> klass, List<Read<?>> reads) {
         this.klass = klass;
-        this.constructor = getConstructor(klass);
-
-        if (reads.size() != constructor.getParameterCount()) {
-            throw new IllegalArgumentException("Constructor has " + constructor.getParameterCount() + " arguments but you supplied " + reads.size() + " readers");
-        }
-
-        final Class<?>[] types = constructor.getParameterTypes();
-        for (int i = 0; i < reads.size(); i++) {
-            if (!types[i].isAssignableFrom(reads.get(i).getElementClass())) {
-                throw new IllegalArgumentException("Constructor param " + i + " is of type " + types[i] + " but you supplied a reader for " + reads.get(i).getElementClass());
-            }
-        }
-
+        this.constructor = Reflection.getConstructor(klass);
         this.reads = reads;
-    }
 
-    @SuppressWarnings("unchecked")
-    private static <T> Constructor<T> getConstructor(Class<T> klass) {
-        final Constructor<?>[] constructors = klass.getConstructors();
-        if (constructors.length == 0) {
-            throw new IllegalArgumentException("No public constructors for " + klass);
-        } else if (constructors.length > 1) {
-            throw new IllegalArgumentException("Ambiguous public constructor for " + klass);
-        } else {
-            return (Constructor<T>)constructors[0];
-        }
+        Reflection.checkReadsConformance("Constructor " + constructor, Arrays.asList(constructor.getParameterTypes()), reads);
     }
 
     @Override
@@ -61,20 +35,7 @@ public class TupleRead<T> implements Read<T> {
             for (int i = 0; i < arguments.length; i++) {
                 arguments[i] = boundReads.get(i).get(rs, ix);
             }
-            try {
-                return constructor.newInstance(arguments);
-            } catch (InstantiationException e) {
-                throw new IllegalStateException("Constructor " + constructor + " was not callable, though we should have already checked that", e);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException("Constructor " + constructor + " was not accessible, though we should have already checked that", e);
-            } catch (InvocationTargetException e) {
-                final Throwable cause = e.getCause();
-                if (cause instanceof RuntimeException) {
-                    throw (RuntimeException)cause;
-                } else {
-                    throw new UndeclaredThrowableException(cause);
-                }
-            }
+            return Reflection.constructUnchecked(constructor, arguments);
         };
     }
 }

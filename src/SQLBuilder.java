@@ -86,7 +86,6 @@ class BatchSQLBuilder extends AbstractSQLBuilder {
     public PreparedStatement build(Connection connection) throws SQLException {
         final PreparedStatement stmt = connection.prepareStatement(super.build());
 
-        // FIXME: test empty batch
         if (size != null) {
             final List<Iterator> iterators = collections.stream().map(Collection::iterator).collect(Collectors.toList());
             for (int i = 0; i < size; i++) {

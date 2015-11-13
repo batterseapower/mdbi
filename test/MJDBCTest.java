@@ -52,7 +52,7 @@ public class MJDBCTest {
     }
 
     @Test
-    public void tuple() throws SQLException {
+    public void tupleRead() throws SQLException {
         m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
         final Row row = m.queryExactlyOne(SQL.of("select * from person"), new TupleRead<>(Row.class));
         assertEquals(1, row.id);
@@ -95,5 +95,19 @@ public class MJDBCTest {
         final List<String> names = Arrays.asList("Max", "John");
         m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
         assertEquals(Arrays.asList("1Max", "2John"), m.queryList(SQL.of("select id || name from person order by id"), String.class));
+    }
+
+    @Test
+    public void updateBatchNoParams() throws SQLException {
+        m.updateBatch(SQL.of("insert into person (id, name) values(1, 'foo')"));
+        assertEquals(0, m.queryExactlyOne(SQL.of("select count(*) from person"), int.class).intValue());
+    }
+
+    @Test
+    public void updateBatchColumnAllNulls() throws SQLException {
+        final List<Integer> ids = Arrays.asList(1, 2);
+        final List<String> names = Arrays.asList(null, null);
+        m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
+        assertEquals(Arrays.asList("1null", "2null"), m.queryList(SQL.of("select id || ifnull(name, 'null') from person order by id"), String.class));
     }
 }
