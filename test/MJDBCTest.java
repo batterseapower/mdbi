@@ -110,4 +110,25 @@ public class MJDBCTest {
         m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
         assertEquals(Arrays.asList("1null", "2null"), m.queryList(SQL.of("select id || ifnull(name, 'null') from person order by id"), String.class));
     }
+
+    public static class Bean {
+        private int id;
+        private String name;
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+    }
+
+    @Test
+    public void beanRead() throws SQLException {
+        m.update(SQL.of("insert into person (id, name) values(1, 'foo')"));
+        final Bean bean = m.queryExactlyOne(SQL.of("select id, name from person"), new BeanRead<>(Bean.class, "Id", "Name"));
+        assertEquals(1, bean.id);
+        assertEquals("foo", bean.name);
+    }
 }
