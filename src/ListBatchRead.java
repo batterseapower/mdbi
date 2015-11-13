@@ -13,7 +13,7 @@ public class ListBatchRead<T> implements BatchRead<List<T>> {
     }
 
     @Override
-    public List<T> get(Read.Map ctxt, PreparedStatement ps) throws SQLException {
+    public List<T> get(Read.Map ctxt, Statementlike ps) throws SQLException {
         return ResultSetBatchRead.adapt((ctxt2, rs) -> {
             final BoundRead<T> boundRead = read.bind(ctxt2);
 

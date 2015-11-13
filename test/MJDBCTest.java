@@ -83,6 +83,19 @@ public class MJDBCTest {
         assertArrayEquals(new String[] { "Max", "John" }, (String[])matrix[1]);
     }
 
+    // FIXME: test more unprepared string escaping scenarios
+
+    @Test
+    public void unprepared() throws SQLException {
+        // It's useful to have access to unprepared statements when working with e.g. MS SQL Server, where temp tables
+        // are scoped to just the prepared statement that creates them. This means that it's impossible to use most
+        // JDBC wrapper libs to create a temp table that will be visible to future queries executing against that
+        // same connection. But you can do it with this wrapper lib!
+        m.withPrepared(false).execute(SQL.of("create temp table temp (name string)"));
+        m.withPrepared(false).execute(SQL.of("insert into temp (name) values (", "O'bama", ")"));
+        assertEquals("O'bama", m.withPrepared(false).queryExactlyOne(SQL.of("select name from temp"), String.class));
+    }
+
     @Test
     public void update() throws SQLException {
         assertEquals(0L, m.update(SQL.of("update person set id = id + 1")));
@@ -91,10 +104,25 @@ public class MJDBCTest {
     }
 
     @Test
+    public void unpreparedUpdate() throws SQLException {
+        assertEquals(0L, m.update(SQL.of("update person set id = id + 1")));
+        m.withPrepared(false).execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
+        assertEquals(1L, m.update(SQL.of("update person set id = id + 1")));
+    }
+
+    @Test
     public void updateBatch() throws SQLException {
         final List<Integer> ids = Arrays.asList(1, 2);
         final List<String> names = Arrays.asList("Max", "John");
         m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
+        assertEquals(Arrays.asList("1Max", "2John"), m.queryList(SQL.of("select id || name from person order by id"), String.class));
+    }
+
+    @Test
+    public void unpreparedUpdateBatch() throws SQLException {
+        final List<Integer> ids = Arrays.asList(1, 2);
+        final List<String> names = Arrays.asList("Max", "John");
+        m.withPrepared(false).updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
         assertEquals(Arrays.asList("1Max", "2John"), m.queryList(SQL.of("select id || name from person order by id"), String.class));
     }
 

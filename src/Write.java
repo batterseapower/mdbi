@@ -1,7 +1,9 @@
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 
 interface Write<T> {
     Write<Integer> INT = ctxt -> new BoundWrite<Integer>() {
@@ -13,6 +15,11 @@ interface Write<T> {
         @Override
         public void set(PreparedStatement s, IndexRef ix, Integer x) throws SQLException {
             s.setInt(ix.x++, x.intValue());
+        }
+
+        @Override
+        public List<String> asSQL(Integer x) {
+            return Collections.singletonList(Integer.toString(x.intValue()));
         }
     };
     Write<Integer> INTEGER = ctxt -> new BoundWrite<Integer>() {
@@ -29,6 +36,11 @@ interface Write<T> {
                 s.setInt(ix.x++, x);
             }
         }
+
+        @Override
+        public List<String> asSQL(Integer x) {
+            return Collections.singletonList(x == null ? "null" : Integer.toString(x.intValue()));
+        }
     };
     Write<String> STRING = ctxt -> new BoundWrite<String>() {
         @Override
@@ -43,6 +55,11 @@ interface Write<T> {
             } else {
                 s.setString(ix.x++, x);
             }
+        }
+
+        @Override
+        public List<String> asSQL(String x) {
+            return Collections.singletonList("'" + x.replace("'", "''") + "'");
         }
     };
 

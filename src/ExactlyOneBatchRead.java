@@ -11,7 +11,7 @@ public class ExactlyOneBatchRead<T> implements BatchRead<T> {
     }
 
     @Override
-    public T get(Read.Map ctxt, PreparedStatement ps) throws SQLException {
+    public T get(Read.Map ctxt, Statementlike ps) throws SQLException {
         return ResultSetBatchRead.adapt((ctxt1, rs) -> {
             if (rs.next()) {
                 return read.bind(ctxt1).get(rs, new IndexRef());

@@ -18,7 +18,7 @@ public class MatrixBatchRead implements BatchRead<Object[]> {
     }
 
     @Override
-    public Object[] get(Read.Map ctxt, PreparedStatement ps) throws SQLException {
+    public Object[] get(Read.Map ctxt, Statementlike ps) throws SQLException {
         return ResultSetBatchRead.adapt((ctxt1, rs) -> {
             final List<BoundRead<?>> boundReads = reads.stream().map(read -> read.bind(ctxt1)).collect(Collectors.toList());
 

@@ -1,6 +1,7 @@
 import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -32,6 +33,15 @@ public class BeanWrite<T> implements Write<T> {
                 for (int i = 0; i < getters.length; i++) {
                     ((BoundWrite<Object>)boundWrites.get(i)).set(s, ix, Reflection.invokeUnchecked(getters[i], x, new Object[0]));
                 }
+            }
+
+            @Override
+            public List<String> asSQL(T x) {
+                final List<String> result = new ArrayList<>();
+                for (int i = 0; i < getters.length; i++) {
+                    result.addAll(((BoundWrite<Object>)boundWrites.get(i)).asSQL(Reflection.invokeUnchecked(getters[i], x, new Object[0])));
+                }
+                return result;
             }
 
             @Override
