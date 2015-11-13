@@ -1,6 +1,9 @@
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -60,6 +63,43 @@ interface Write<T> {
         @Override
         public List<String> asSQL(String x) {
             return Collections.singletonList("'" + x.replace("'", "''") + "'");
+        }
+    };
+    Write<LocalDate> LOCAL_DATE = ctxt -> new BoundWrite<LocalDate>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, LocalDate x) throws SQLException {
+            s.setTimestamp(ix.x++, new Timestamp(x.atTime(0, 0).atZone(Time.UTC_ZONE_ID).toInstant().toEpochMilli()), Time.UTC_CALENDAR.get());
+        }
+
+        @Override
+        public List<String> asSQL(LocalDate x) {
+            return Collections.singletonList("'" + x.toString() + "'");
+        }
+    };
+    Write<LocalDateTime> LOCAL_DATE_TIME = new Write<LocalDateTime>() {
+        @Override
+        public BoundWrite<LocalDateTime> bind(Map ctxt) {
+            return new BoundWrite<LocalDateTime>() {
+                @Override
+                public int arity() {
+                    return 1;
+                }
+
+                @Override
+                public void set(PreparedStatement s, IndexRef ix, LocalDateTime x) throws SQLException {
+                    s.setTimestamp(ix.x++, new Timestamp(x.atZone(Time.UTC_ZONE_ID).toInstant().toEpochMilli()), Time.UTC_CALENDAR.get());
+                }
+
+                @Override
+                public List<String> asSQL(LocalDateTime x) {
+                    return Collections.singletonList("'" + x.toString() + "'");
+                }
+            };
         }
     };
 

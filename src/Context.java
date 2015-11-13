@@ -1,3 +1,6 @@
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 public class Context {
     final Read.Map readers = new Read.Map();
     final Write.Map writers = new Write.Map();
@@ -7,6 +10,8 @@ public class Context {
         context.register(int.class, Write.INT, Read.INT);
         context.register(Integer.class, Write.INTEGER, Read.INTEGER);
         context.register(String.class, Write.STRING, Read.STRING);
+        context.register(LocalDate.class, Write.LOCAL_DATE, Read.LOCAL_DATE);
+        context.register(LocalDateTime.class, Write.LOCAL_DATE_TIME, Read.LOCAL_DATE_TIME);
 
         // FIXME: register more default stuff
         return context;

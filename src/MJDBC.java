@@ -4,6 +4,7 @@ import java.sql.*;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class MJDBC {
     private interface ConnectionObtainer {
@@ -37,25 +38,34 @@ public class MJDBC {
     private final Context context;
     private final ConnectionObtainer connectionObtainer;
     private final boolean prepared;
+    private final Supplier<Retry> retryPolicy;
 
     // FIXME: transactions
     // FIXME: retry deadlocks
     public MJDBC(Context context, Connection connection) {
-        this(context, ConnectionObtainer.fromConnection(connection), true);
+        this(context, ConnectionObtainer.fromConnection(connection));
     }
     public MJDBC(Context context, DataSource dataSource) {
-        this(context, ConnectionObtainer.fromDataSource(dataSource), true);
+        this(context, ConnectionObtainer.fromDataSource(dataSource));
+    }
+    private MJDBC(Context context, ConnectionObtainer connectionObtainer) {
+        this(context, connectionObtainer, true, RetryNothing::new);
     }
 
     private MJDBC(Context context, ConnectionObtainer connectionObtainer,
-                  boolean prepared) {
+                  boolean prepared, Supplier<Retry> retryPolicy) {
         this.context = context;
         this.connectionObtainer = connectionObtainer;
         this.prepared = prepared;
+        this.retryPolicy = retryPolicy;
     }
 
     public MJDBC withPrepared(boolean prepared) {
-        return new MJDBC(context, connectionObtainer, prepared);
+        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
+    }
+
+    public MJDBC withRetryPolicy(Supplier<Retry> retryPolicy) {
+        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
 
     public void execute(SQL sql) throws SQLException {

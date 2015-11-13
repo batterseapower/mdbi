@@ -1,8 +1,14 @@
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 
 public interface Read<T> {
     Read<Integer> INT = new Read<Integer>() {
@@ -44,6 +50,28 @@ public interface Read<T> {
         @Override
         public BoundRead<String> bind(Read.Map ctxt) {
             return (rs, ix) -> rs.getString(ix.x++);
+        }
+    };
+    Read<LocalDate> LOCAL_DATE = new Read<LocalDate>() {
+        @Override
+        public Class<LocalDate> getElementClass() {
+            return LocalDate.class;
+        }
+
+        @Override
+        public BoundRead<LocalDate> bind(Map ctxt) {
+            return (rs, ix) -> Instant.ofEpochMilli(rs.getTimestamp(ix.x++, Time.UTC_CALENDAR.get()).getTime()).atZone(Time.UTC_ZONE_ID).toLocalDateTime().toLocalDate();
+        }
+    };
+    Read<LocalDateTime> LOCAL_DATE_TIME = new Read<LocalDateTime>() {
+        @Override
+        public Class<LocalDateTime> getElementClass() {
+            return LocalDateTime.class;
+        }
+
+        @Override
+        public BoundRead<LocalDateTime> bind(Map ctxt) {
+            return (rs, ix) -> Instant.ofEpochMilli(rs.getTimestamp(ix.x++, Time.UTC_CALENDAR.get()).getTime()).atZone(Time.UTC_ZONE_ID).toLocalDateTime();
         }
     };
 

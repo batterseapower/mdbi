@@ -5,9 +5,12 @@ import org.junit.Test;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -96,6 +99,19 @@ public class MJDBCTest {
         assertEquals("O'bama", m.withPrepared(false).queryExactlyOne(SQL.of("select name from temp"), String.class));
     }
 
+    private void assertStringRoundtrips(String x) throws SQLException {
+        assertEquals(x, m.withPrepared(false).queryExactlyOne(SQL.of("select", x), String.class));
+    }
+
+    @Test
+    public void trickyUnpreparedStringEscapes() throws SQLException {
+        assertStringRoundtrips("foo\n\tbar");
+        assertStringRoundtrips("foo\0bar");
+        assertStringRoundtrips("foo\'\"\\bar");
+        assertStringRoundtrips("foo\u001Abar");
+        assertStringRoundtrips("你好");
+    }
+
     @Test
     public void update() throws SQLException {
         assertEquals(0L, m.update(SQL.of("update person set id = id + 1")));
@@ -130,6 +146,21 @@ public class MJDBCTest {
     public void updateBatchNoParams() throws SQLException {
         m.updateBatch(SQL.of("insert into person (id, name) values(1, 'foo')"));
         assertEquals(0, m.queryExactlyOne(SQL.of("select count(*) from person"), int.class).intValue());
+    }
+
+    @Test
+    public void localDate() throws SQLException {
+        assertEquals(LocalDate.of(2015, 8, 1), m.queryExactlyOne(SQL.of("select ", LocalDate.of(2015, 8, 1)), LocalDate.class));
+        assertEquals("2015-08-01", m.queryExactlyOne(SQL.of("select date('2015-08-01')"), String.class));
+        assertEquals("2015-08-01", m.queryExactlyOne(SQL.of("select date(", LocalDate.of(2015, 8, 1), " / 1000, 'unixepoch')"), String.class));
+    }
+
+    @Test
+    public void localDateTime() throws SQLException {
+        final LocalDateTime ldt = LocalDateTime.of(2015, 8, 1, 2, 30, 44);
+        assertEquals(ldt, m.queryExactlyOne(SQL.of("select ", ldt), LocalDateTime.class));
+        assertEquals("2015-08-01 02:30:44", m.queryExactlyOne(SQL.of("select datetime('2015-08-01 02:30:44')"), String.class));
+        assertEquals("2015-08-01 02:30:44", m.queryExactlyOne(SQL.of("select datetime(", ldt, " / 1000, 'unixepoch')"), String.class));
     }
 
     @Test
