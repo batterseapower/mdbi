@@ -2,6 +2,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.util.HashMap;
 import java.util.List;
 
 class Reflection {
@@ -60,7 +61,7 @@ class Reflection {
 
     public static void checkReadsConformance(String context, List<Class<?>> types, List<Read<?>> reads) {
         if (reads.size() != types.size()) {
-            throw new IllegalArgumentException(context + " has " + types.size() + " arguments but you supplied " + reads.size() + " readers");
+            throw new IllegalArgumentException(context + " has " + types.size() + " elements but you supplied " + reads.size() + " readers");
         }
 
         for (int i = 0; i < reads.size(); i++) {
@@ -68,5 +69,63 @@ class Reflection {
                 throw new IllegalArgumentException(context + " element " + i + " is of type " + types.get(i) + " but you supplied a reader for " + reads.get(i).getElementClass());
             }
         }
+    }
+
+    public static void checkWritesConformance(String context, List<Class<?>> types, List<Write<?>> writes) {
+        if (writes.size() != types.size()) {
+            throw new IllegalArgumentException(context + " has " + types.size() + " elements but you supplied " + writes.size() + " writers");
+        }
+    }
+
+    public static Method[] lookupBeanSetters(Class<?> klass, List<String> fields) {
+        final HashMap<String, Method> setters = new HashMap<>();
+        for (Method m : klass.getMethods()) {
+            if (m.getName().startsWith("set") && m.getParameterCount() == 1) {
+                if (setters.put(m.getName().substring(3), m) != null) {
+                    throw new IllegalArgumentException("Class " + klass + " has multiple 1-arg methods called " + m.getName());
+                }
+            }
+        }
+
+        final Method[] methods = new Method[fields.size()];
+        for (int i = 0; i < fields.size(); i++) {
+            final String field = fields.get(i);
+            final Method setter = setters.get(field);
+            if (setter == null) {
+                throw new IllegalArgumentException("Class " + klass + " doesn't have a setter for " + field);
+            }
+            methods[i] = setter;
+        }
+
+        return methods;
+    }
+
+    public static <T> Method[] lookupBeanGetters(Class<T> klass, List<String> fields) {
+        final HashMap<String, Method> getters = new HashMap<>();
+        for (Method m : klass.getMethods()) {
+            if (m.getName().startsWith("is") && m.getParameterCount() == 0) {
+                final String property = m.getName().substring(2);
+                if (getters.put(property, m) != null) {
+                    throw new IllegalArgumentException("Class " + klass + " has multiple getters for property " + property);
+                }
+            } else if (m.getName().startsWith("get") && m.getParameterCount() == 0) {
+                final String property = m.getName().substring(3);
+                if (getters.put(property, m) != null) {
+                    throw new IllegalArgumentException("Class " + klass + " has multiple getters for property " + property);
+                }
+            }
+        }
+
+        final Method[] methods = new Method[fields.size()];
+        for (int i = 0; i < fields.size(); i++) {
+            final String field = fields.get(i);
+            final Method setter = getters.get(field);
+            if (setter == null) {
+                throw new IllegalArgumentException("Class " + klass + " doesn't have a getter for " + field);
+            }
+            methods[i] = setter;
+        }
+
+        return methods;
     }
 }

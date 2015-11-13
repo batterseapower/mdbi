@@ -67,6 +67,7 @@ public class MJDBCTest {
     @Test
     public void canRegisterClass() throws SQLException {
         ctxt.registerRead(Row.class, new TupleRead<>(Row.class));
+
         m.execute(SQL.of("insert into person (id, name) values (", 1, ",", "Max", ")"));
         final Row row = m.queryExactlyOne(SQL.of("select * from person"), Row.class);
         assertEquals("Max", row.name);
@@ -115,8 +116,16 @@ public class MJDBCTest {
         private int id;
         private String name;
 
+        public int getId() {
+            return id;
+        }
+
         public void setId(int id) {
             this.id = id;
+        }
+
+        public String getName() {
+            return name;
         }
 
         public void setName(String name) {
@@ -130,5 +139,16 @@ public class MJDBCTest {
         final Bean bean = m.queryExactlyOne(SQL.of("select id, name from person"), new BeanRead<>(Bean.class, "Id", "Name"));
         assertEquals(1, bean.id);
         assertEquals("foo", bean.name);
+    }
+
+    @Test
+    public void beanWrite() throws SQLException {
+        ctxt.registerWrite(Bean.class, new BeanWrite<>(Bean.class, "Id", "Name"));
+
+        final Bean bean = new Bean();
+        bean.id = 1;
+        bean.name = "Max";
+        m.update(SQL.of("insert into person (id, name) values (", bean, ")"));
+        assertEquals("Max", m.queryExactlyOne(SQL.of("select name from person"), String.class));
     }
 }

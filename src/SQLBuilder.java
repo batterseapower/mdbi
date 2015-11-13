@@ -23,12 +23,15 @@ abstract class AbstractSQLBuilder {
         if (arg instanceof SQL) {
             visitSQL((SQL)arg);
         } else {
-            stringBuilder.append("?");
-            visitObject(arg);
+            final int arity = visitObject(arg);
+            for (int i = 0; i < arity; i++) {
+                if (i != 0) stringBuilder.append(',');
+                stringBuilder.append("?");
+            }
         }
     }
 
-    protected abstract void visitObject(Object arg);
+    protected abstract int visitObject(Object arg);
 
     protected String build() {
         return stringBuilder.toString();
@@ -52,7 +55,7 @@ class BatchSQLBuilder extends AbstractSQLBuilder {
 
     @Override
     @SuppressWarnings("unchecked")
-    protected void visitObject(Object argObject) {
+    protected int visitObject(Object argObject) {
         if (!(argObject instanceof Collection)) {
             throw new IllegalArgumentException("Batch updates expect Collections, but you supplied a " + (argObject == null ? "null" : argObject.getClass().toString()));
         }
@@ -75,11 +78,16 @@ class BatchSQLBuilder extends AbstractSQLBuilder {
 
             if (example == null) {
                 // We know for sure that all elements of the column are null
+                // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.
                 actions.add((stmt, ref, _null) -> stmt.setObject(ref.x++, null));
+                return 1;
             } else {
                 final BoundWrite<Object> write = (BoundWrite<Object>)wm.get(example.getClass()).bind(wm);
                 actions.add(write::set);
+                return write.arity();
             }
+        } else {
+            return 0;
         }
     }
 
@@ -115,13 +123,16 @@ class SQLBuilder extends AbstractSQLBuilder {
     }
 
     @SuppressWarnings("unchecked")
-    public void visitObject(Object arg) {
+    public int visitObject(Object arg) {
         if (arg == null) {
+            // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.
             actions.add((stmt, ref) -> stmt.setObject(ref.x++, null));
+            return 1;
         } else {
             final Class<?> klass = arg.getClass();
             final BoundWrite<Object> write = (BoundWrite<Object>)wm.get(klass).bind(wm);
             actions.add((stmt, ref) -> write.set(stmt, ref, arg));
+            return write.arity();
         }
     }
 

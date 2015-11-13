@@ -7,6 +7,8 @@ public class MJDBC {
     private final Connection connection;
 
     // FIXME: support DataSource
+    // FIXME: positional params? Maybe.
+    // FIXME: support nested SQLs better
     public MJDBC(Context context, Connection connection) {
         this.context = context;
         this.connection = connection;

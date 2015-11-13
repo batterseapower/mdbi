@@ -1,23 +1,48 @@
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Types;
 import java.util.HashMap;
 
 interface Write<T> {
-    Write<Integer> INT = ctxt -> (s, ix, x) -> s.setInt(ix.x++, x.intValue());
-    Write<Integer> INTEGER = ctxt -> (s, ix, x) -> {
-        if (x == null) {
-            s.setNull(ix.x++, Types.INTEGER);
-        } else {
-            s.setInt(ix.x++, x);
+    Write<Integer> INT = ctxt -> new BoundWrite<Integer>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, Integer x) throws SQLException {
+            s.setInt(ix.x++, x.intValue());
         }
     };
-    Write<String> STRING = ctxt -> (s, ix, x) -> {
-        if (x == null) {
-            s.setNull(ix.x++, Types.VARCHAR);
-        } else {
-            s.setString(ix.x++, x);
+    Write<Integer> INTEGER = ctxt -> new BoundWrite<Integer>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, Integer x) throws SQLException {
+            if (x == null) {
+                s.setNull(ix.x++, Types.INTEGER);
+            } else {
+                s.setInt(ix.x++, x);
+            }
+        }
+    };
+    Write<String> STRING = ctxt -> new BoundWrite<String>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, String x) throws SQLException {
+            if (x == null) {
+                s.setNull(ix.x++, Types.VARCHAR);
+            } else {
+                s.setString(ix.x++, x);
+            }
         }
     };
 
