@@ -14,6 +14,16 @@ abstract class AbstractSQLBuilder {
             if (arg instanceof SQL) {
                 visitSQL((SQL)arg);
                 nextMayBeParam = true;
+            } else if (arg instanceof In) {
+                final In in = (In)arg;
+                // Exploit the fact that 'null not in (null)' to avoid generating nullary IN clauses:
+                // systems like SQL Server can't parse them
+                stringBuilder.append("(null");
+                for (int j = 0; j < in.args.length; j++) {
+                    stringBuilder.append(',');
+                    visitArg(in.args[j]);
+                }
+                stringBuilder.append(')');
             } else if (!nextMayBeParam && (arg instanceof String)) {
                 stringBuilder.append((String)arg);
                 nextMayBeParam = true;
@@ -106,6 +116,8 @@ class BatchBuilder {
             klass = null;
         }
 
+        // FIXME: have bind() take the object too, and then find one binder per elt here?
+        // Would mean we could have a Collection Write class that Just Works, rather than the "In" special case... (except for the nullary wrinkle..)
         if (klass == null) {
             // We know for sure that all elements of the column are null
             // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.

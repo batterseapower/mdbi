@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -207,5 +206,12 @@ public class MJDBCTest {
         bean.name = "Max";
         m.update(SQL.of("insert into person (id, name) values (", bean, ")"));
         assertEquals("Max", m.queryExactlyOne(SQL.of("select name from person"), String.class));
+    }
+
+    @Test
+    public void in() throws SQLException {
+        assertEquals(1, m.queryList(SQL.of("select 1 where 1 in ", In.of(1, 2)), String.class).size());
+        assertEquals(0, m.queryList(SQL.of("select 1 where 1 in ", In.of(2)), String.class).size());
+        assertEquals(0, m.queryList(SQL.of("select 1 where 1 in ", In.of()), String.class).size());
     }
 }
