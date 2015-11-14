@@ -7,8 +7,7 @@ public class Transactionally {
     }
 
     public static <T> T run(Connection c, Action<T> action) throws SQLException {
-        final boolean initialAutoCommit = c.getAutoCommit();
-        if (!initialAutoCommit) {
+        if (!c.getAutoCommit()) {
             // Already in transaction, join that one
             return action.run();
         } else {

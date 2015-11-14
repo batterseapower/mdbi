@@ -63,10 +63,12 @@ public class MJDBC {
         this.retryPolicy = retryPolicy;
     }
 
+    public boolean isPrepared() { return prepared; }
     public MJDBC withPrepared(boolean prepared) {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
 
+    public Supplier<Retry> getRetryPolicy() { return retryPolicy; }
     public MJDBC withRetryPolicy(Supplier<Retry> retryPolicy) {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
@@ -139,11 +141,11 @@ public class MJDBC {
     }
 
     public <T> List<T> queryList(SQL sql, Class<T> klass) throws SQLException {
-        return queryList(sql, new ContextRead<T>(klass));
+        return queryList(sql, new ContextRead<>(klass));
     }
 
     public <T> List<T> queryList(SQL sql, Read<T> read) throws SQLException {
-        return query(sql, new ListBatchRead<T>(read));
+        return query(sql, new ListBatchRead<>(read));
     }
 
     public <T> T queryExactlyOne(SQL sql, Class<T> klass) throws SQLException {
@@ -151,7 +153,7 @@ public class MJDBC {
     }
 
     public <T> T queryExactlyOne(SQL sql, Read<T> read) throws SQLException {
-        return query(sql, new ExactlyOneBatchRead<T>(read));
+        return query(sql, new ExactlyOneBatchRead<>(read));
     }
 
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {

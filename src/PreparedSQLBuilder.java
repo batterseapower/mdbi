@@ -21,24 +21,20 @@ abstract class AbstractSQLBuilder {
                 stringBuilder.append("(null");
                 for (int j = 0; j < in.args.length; j++) {
                     stringBuilder.append(',');
-                    visitArg(in.args[j]);
+                    if (in.args[j] instanceof SQL) {
+                        visitSQL((SQL)in.args[j]);
+                    } else {
+                        visitObject(in.args[j]);
+                    }
                 }
                 stringBuilder.append(')');
             } else if (!nextMayBeParam && (arg instanceof String)) {
                 stringBuilder.append((String)arg);
                 nextMayBeParam = true;
             } else {
-                visitArg(arg);
+                visitObject(arg);
                 nextMayBeParam = false;
             }
-        }
-    }
-
-    public void visitArg(Object arg) {
-        if (arg instanceof SQL) {
-            visitSQL((SQL)arg);
-        } else {
-            visitObject(arg);
         }
     }
 
