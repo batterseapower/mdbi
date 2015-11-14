@@ -1,3 +1,5 @@
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
@@ -5,7 +7,7 @@ import java.util.List;
 public interface BoundWrite<T> {
     int arity();
 
-    void set(PreparedStatement s, IndexRef ix, T x) throws SQLException;
+    void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, @Nullable T x) throws SQLException;
 
-    List<String> asSQL(T x);
+    @Nonnull List<String> asSQL(@Nullable T x);
 }

@@ -1,3 +1,4 @@
+import javax.annotation.Nonnull;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -101,12 +102,12 @@ class UnpreparedSQLBuilder {
 }
 
 class BatchBuilder {
-    private final Write.Map wm;
+    private final Writes.Map wm;
 
     private final List<Collection> collections = new ArrayList<>();
     private Integer size;
 
-    public BatchBuilder(Write.Map wm) {
+    public BatchBuilder(Writes.Map wm) {
         this.wm = wm;
     }
 
@@ -160,10 +161,11 @@ class BoundWriteNull implements BoundWrite<Object> {
     }
 
     @Override
-    public void set(PreparedStatement s, IndexRef ix, Object x) throws SQLException {
+    public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, Object x) throws SQLException {
         s.setObject(ix.x++, null);
     }
 
+    @Nonnull
     @Override
     public List<String> asSQL(Object x) {
         return Collections.singletonList("null");
@@ -175,7 +177,7 @@ class BatchUnpreparedSQLBuilder {
     private final UnpreparedSQLBuilder sqlBuilder;
     private final List<Map.Entry<BoundWrite<Object>, List<String>>> boundWrites = new ArrayList<>();
 
-    public BatchUnpreparedSQLBuilder(Write.Map wm) {
+    public BatchUnpreparedSQLBuilder(Writes.Map wm) {
         batchBuilder = new BatchBuilder(wm);
         sqlBuilder = new UnpreparedSQLBuilder(arg -> {
             final BoundWrite<Object> boundWrite = batchBuilder.visit(arg);
@@ -237,7 +239,7 @@ class BatchPreparedSQLBuilder {
     private final PreparedSQLBuilder sqlBuilder;
     private final List<Action> actions = new ArrayList<>();
 
-    public BatchPreparedSQLBuilder(Write.Map wm) {
+    public BatchPreparedSQLBuilder(Writes.Map wm) {
         this.batch = new BatchBuilder(wm);
         sqlBuilder = new PreparedSQLBuilder(arg -> {
             final BoundWrite<Object> write = batch.visit(arg);
@@ -270,7 +272,7 @@ class BatchPreparedSQLBuilder {
 class BespokeUnpreparedSQLBuilder {
     private final UnpreparedSQLBuilder sqlBuilder;
 
-    public BespokeUnpreparedSQLBuilder(Write.Map wm) {
+    public BespokeUnpreparedSQLBuilder(Writes.Map wm) {
         sqlBuilder = new UnpreparedSQLBuilder(arg -> {
             final BoundWrite<Object> write = BespokePreparedSQLBuilder.getObjectBoundWrite(wm, arg);
             return write.asSQL(arg);
@@ -294,7 +296,7 @@ class BespokePreparedSQLBuilder {
     private final PreparedSQLBuilder sqlBuilder;
     private final List<Action> actions = new ArrayList<>();
 
-    public BespokePreparedSQLBuilder(Write.Map wm) {
+    public BespokePreparedSQLBuilder(Writes.Map wm) {
         sqlBuilder = new PreparedSQLBuilder(arg -> {
             final BoundWrite<Object> write = getObjectBoundWrite(wm, arg);
             actions.add((stmt, ref) -> write.set(stmt, ref, arg));
@@ -307,7 +309,7 @@ class BespokePreparedSQLBuilder {
     }
 
     @SuppressWarnings("unchecked")
-    static BoundWrite<Object> getObjectBoundWrite(Write.Map wm, Object arg) {
+    static BoundWrite<Object> getObjectBoundWrite(Writes.Map wm, Object arg) {
         BoundWrite<Object> write;
         if (arg == null) {
             // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.

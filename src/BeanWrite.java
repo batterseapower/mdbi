@@ -1,3 +1,4 @@
+import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -25,21 +26,22 @@ public class BeanWrite<T> implements Write<T> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public BoundWrite<T> bind(Map ctxt) {
+    public BoundWrite<T> bind(Writes.Map ctxt) {
         final List<BoundWrite<?>> boundWrites = writes.stream().map(w -> w.bind(ctxt)).collect(Collectors.toList());
         return new BoundWrite<T>() {
             @Override
-            public void set(PreparedStatement s, IndexRef ix, T x) throws SQLException {
+            public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, T x) throws SQLException {
                 for (int i = 0; i < getters.length; i++) {
                     ((BoundWrite<Object>)boundWrites.get(i)).set(s, ix, Reflection.invokeUnchecked(getters[i], x, new Object[0]));
                 }
             }
 
+            @Nonnull
             @Override
             public List<String> asSQL(T x) {
                 final List<String> result = new ArrayList<>();
                 for (int i = 0; i < getters.length; i++) {
-                    result.addAll(((BoundWrite<Object>)boundWrites.get(i)).asSQL(Reflection.invokeUnchecked(getters[i], x, new Object[0])));
+                    result.addAll(((BoundWrite<Object>) boundWrites.get(i)).asSQL(Reflection.invokeUnchecked(getters[i], x, new Object[0])));
                 }
                 return result;
             }

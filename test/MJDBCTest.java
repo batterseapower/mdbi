@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -65,7 +66,7 @@ public class MJDBCTest {
     @Test
     public void tupleWrite() throws SQLException {
         ctxt.registerWrite(Row.class, TupleWrite.Builder.<Row>create()
-                                                        .add(int.class,    r -> r.id)
+                                                        .add(int.class, r -> r.id)
                                                         .add(String.class, r -> r.name)
                                                         .build());
         m.execute(SQL.of("insert into person (id, name) values (", new Row(1, "Max"), ")"));
@@ -161,6 +162,13 @@ public class MJDBCTest {
         assertEquals(LocalDate.of(2015, 8, 1), m.queryExactlyOne(SQL.of("select ", LocalDate.of(2015, 8, 1)), LocalDate.class));
         assertEquals("2015-08-01", m.queryExactlyOne(SQL.of("select date('2015-08-01')"), String.class));
         assertEquals("2015-08-01", m.queryExactlyOne(SQL.of("select date(", LocalDate.of(2015, 8, 1), " / 1000, 'unixepoch')"), String.class));
+    }
+
+    @Test
+    public void localTime() throws SQLException {
+        assertEquals(LocalTime.of(13, 13), m.queryExactlyOne(SQL.of("select ", LocalTime.of(13, 13)), LocalTime.class));
+        assertEquals("13:13:00", m.queryExactlyOne(SQL.of("select time('13:13')"), String.class));
+        assertEquals("13:13:00", m.queryExactlyOne(SQL.of("select time(", LocalTime.of(13, 13), " / 1000, 'unixepoch')"), String.class));
     }
 
     @Test

@@ -1,9 +1,6 @@
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class ListBatchRead<T> implements BatchRead<List<T>> {
     private final Read<T> read;
@@ -13,7 +10,7 @@ public class ListBatchRead<T> implements BatchRead<List<T>> {
     }
 
     @Override
-    public List<T> get(Read.Map ctxt, Statementlike ps) throws SQLException {
+    public List<T> get(Reads.Map ctxt, Statementlike ps) throws SQLException {
         return ResultSetBatchRead.adapt((ctxt2, rs) -> {
             final BoundRead<T> boundRead = read.bind(ctxt2);
 

@@ -1,3 +1,4 @@
+import javax.annotation.Nonnull;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.AbstractMap;
@@ -33,7 +34,7 @@ public class TupleWrite<T> implements Write<T> {
     }
 
     @Override
-    public BoundWrite<T> bind(Map ctxt) {
+    public BoundWrite<T> bind(Writes.Map ctxt) {
         final List<BoundWrite<?>> boundWrites = new ArrayList<>(args.size());
         for (java.util.Map.Entry<Write<?>, Function<T, ?>> e : args) {
             boundWrites.add(e.getKey().bind(ctxt));
@@ -46,12 +47,13 @@ public class TupleWrite<T> implements Write<T> {
 
             @Override
             @SuppressWarnings("unchecked")
-            public void set(PreparedStatement s, IndexRef ix, T x) throws SQLException {
+            public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, T x) throws SQLException {
                 for (int i = 0; i < boundWrites.size(); i++) {
                     ((BoundWrite<Object>)boundWrites.get(i)).set(s, ix, args.get(i).getValue().apply(x));
                 }
             }
 
+            @Nonnull
             @Override
             @SuppressWarnings("unchecked")
             public List<String> asSQL(T x) {

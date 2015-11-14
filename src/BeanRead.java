@@ -3,7 +3,6 @@ import java.lang.reflect.Method;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,7 +35,7 @@ public class BeanRead<T> implements Read<T> {
     }
 
     @Override
-    public BoundRead<T> bind(Map ctxt) {
+    public BoundRead<T> bind(Reads.Map ctxt) {
         final List<BoundRead> boundReads = reads.stream().map(r -> r.bind(ctxt)).collect(Collectors.toList());
         return new BoundRead<T>() {
             @Override
