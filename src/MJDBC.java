@@ -103,7 +103,7 @@ public class MJDBC {
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    final Map.Entry<Integer, Iterator<String>> e = builder.buildIterator();
+                    final Map.Entry<Integer, Iterator<String>> e = builder.build();
                     final Iterator<String> it = e.getValue();
                     final long[] result = new long[e.getKey()];
 
@@ -158,7 +158,7 @@ public class MJDBC {
 
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
         if (prepared) {
-            final PreparedSQLBuilder builder = new PreparedSQLBuilder(context.writers);
+            final BespokePreparedSQLBuilder builder = new BespokePreparedSQLBuilder(context.writers);
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final PreparedStatement ps = builder.build(c)) {
@@ -166,7 +166,7 @@ public class MJDBC {
                 }
             });
         } else {
-            final UnpreparedSQLBuilder builder = new UnpreparedSQLBuilder(context.writers);
+            final BespokeUnpreparedSQLBuilder builder = new BespokeUnpreparedSQLBuilder(context.writers);
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {

@@ -2,10 +2,17 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-abstract class AbstractSQLBuilder {
-    protected final StringBuilder stringBuilder = new StringBuilder();
+class SQLBuilder {
+    private final Consumer<Object> visitHole;
+    private final StringBuilder stringBuilder = new StringBuilder();
+
+    public SQLBuilder(Consumer<Object> visitHole) {
+        this.visitHole = visitHole;
+    }
 
     public void visitSQL(SQL sql) {
         boolean nextMayBeParam = false;
@@ -24,55 +31,73 @@ abstract class AbstractSQLBuilder {
                     if (in.args[j] instanceof SQL) {
                         visitSQL((SQL)in.args[j]);
                     } else {
-                        visitObject(in.args[j]);
+                        visitHole.accept(in.args[j]);
                     }
                 }
                 stringBuilder.append(')');
+                nextMayBeParam = false;
             } else if (!nextMayBeParam && (arg instanceof String)) {
-                stringBuilder.append((String)arg);
+                visitSQLLiteral((String)arg);
                 nextMayBeParam = true;
             } else {
-                visitObject(arg);
+                visitHole.accept(arg);
                 nextMayBeParam = false;
             }
         }
     }
 
-    protected abstract void visitObject(Object arg);
+    public void visitSQLLiteral(String sql) {
+        stringBuilder.append(sql);
+    }
 
-    protected String build() {
+    public String build() {
         return stringBuilder.toString();
     }
 }
 
-abstract class AbstractPreparedSQLBuilder extends AbstractSQLBuilder {
-    @Override
-    protected void visitObject(Object arg) {
-        final int arity = visitPreparedObject(arg);
-        for (int i = 0; i < arity; i++) {
-            if (i != 0) stringBuilder.append(',');
-            stringBuilder.append("?");
-        }
+class PreparedSQLBuilder {
+    private final SQLBuilder builder;
+
+    public PreparedSQLBuilder(Function<Object, Integer> visitHole) {
+        this.builder = new SQLBuilder(arg -> {
+            final int arity = visitHole.apply(arg);
+            for (int i = 0; i < arity; i++) {
+                if (i != 0) this.builder.visitSQLLiteral(",");
+                this.builder.visitSQLLiteral("?");
+            }
+
+        });
     }
 
-    protected abstract int visitPreparedObject(Object arg);
+    public void visitSQL(SQL sql) {
+        builder.visitSQL(sql);
+    }
 
-    protected PreparedStatement build(Connection connection) throws SQLException {
-        return connection.prepareStatement(super.build());
+    public PreparedStatement build(Connection connection) throws SQLException {
+        return connection.prepareStatement(builder.build());
     }
 }
 
-abstract class AbstractUnpreparedSQLBuilder extends AbstractSQLBuilder {
-    @Override
-    protected void visitObject(Object arg) {
-        final List<String> xs = visitUnpreparedObject(arg);
-        for (int i = 0; i < xs.size(); i++) {
-            if (i != 0) stringBuilder.append(',');
-            stringBuilder.append(xs.get(i));
-        }
+class UnpreparedSQLBuilder {
+    private final SQLBuilder builder;
+
+    public UnpreparedSQLBuilder(Function<Object, List<String>> visitHole) {
+        this.builder = new SQLBuilder(arg ->{
+            final List<String> xs = visitHole.apply(arg);
+            for (int i = 0; i < xs.size(); i++) {
+                if (i != 0) this.builder.visitSQLLiteral(",");
+                this.builder.visitSQLLiteral(xs.get(i));
+            }
+        });
     }
 
-    protected abstract List<String> visitUnpreparedObject(Object arg);
+    public void visitSQL(SQL sql) {
+        builder.visitSQL(sql);
+    }
+
+    public String build() {
+        return builder.build();
+    }
 }
 
 class BatchBuilder {
@@ -94,7 +119,7 @@ class BatchBuilder {
         if (size == null) {
             size = arg.size();
         } else if (size != arg.size()) {
-            throw new IllegalArgumentException("All collections supplied to batch update must be of the same size, but you had both sizes " + size + " and " + arg.size());
+            throw new IllegalArgumentException("All collections supplied to batchBuilder update must be of the same size, but you had both sizes " + size + " and " + arg.size());
         }
 
         collections.add(arg);
@@ -145,31 +170,33 @@ class BoundWriteNull implements BoundWrite<Object> {
     }
 }
 
-class BatchUnpreparedSQLBuilder extends AbstractUnpreparedSQLBuilder {
-    private final BatchBuilder batch;
+class BatchUnpreparedSQLBuilder {
+    private final BatchBuilder batchBuilder;
+    private final UnpreparedSQLBuilder sqlBuilder;
     private final List<Map.Entry<BoundWrite<Object>, List<String>>> boundWrites = new ArrayList<>();
 
     public BatchUnpreparedSQLBuilder(Write.Map wm) {
-        batch = new BatchBuilder(wm);
+        batchBuilder = new BatchBuilder(wm);
+        sqlBuilder = new UnpreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> boundWrite = batchBuilder.visit(arg);
+
+            final List<String> result = new ArrayList<>();
+            for (int i = 0; i < boundWrite.arity(); i++) {
+                result.add(UUID.randomUUID().toString());
+            }
+
+            boundWrites.add(new AbstractMap.SimpleImmutableEntry<BoundWrite<Object>, List<String>>(boundWrite, result));
+            return result;
+        });
     }
 
-    @Override
-    protected List<String> visitUnpreparedObject(Object arg) {
-        final BoundWrite<Object> boundWrite = batch.visit(arg);
-
-        final List<String> result = new ArrayList<>();
-        for (int i = 0; i < boundWrite.arity(); i++) {
-            result.add(UUID.randomUUID().toString());
-        }
-
-        boundWrites.add(new AbstractMap.SimpleImmutableEntry<BoundWrite<Object>, List<String>>(boundWrite, result));
-        return result;
+    public void visitSQL(SQL sql) {
+        sqlBuilder.visitSQL(sql);
     }
 
-    // TODO: should be called "build"
-    public Map.Entry<Integer, Iterator<String>> buildIterator() {
-        final String sql = super.build();
-        final Map.Entry<Integer, List<Collection>> batchBuilt = batch.build();
+    public Map.Entry<Integer, Iterator<String>> build() {
+        final String sql = sqlBuilder.build();
+        final Map.Entry<Integer, List<Collection>> batchBuilt = batchBuilder.build();
         final int size = batchBuilt.getKey();
 
         final List<Iterator> iterators = batchBuilt.getValue().stream().map(Collection::iterator).collect(Collectors.toList());
@@ -201,28 +228,30 @@ class BatchUnpreparedSQLBuilder extends AbstractUnpreparedSQLBuilder {
     }
 }
 
-class BatchPreparedSQLBuilder extends AbstractPreparedSQLBuilder {
+class BatchPreparedSQLBuilder {
     private interface Action {
         void write(PreparedStatement stmt, IndexRef ref, Object arg) throws SQLException;
     }
 
     private final BatchBuilder batch;
+    private final PreparedSQLBuilder sqlBuilder;
     private final List<Action> actions = new ArrayList<>();
 
     public BatchPreparedSQLBuilder(Write.Map wm) {
         this.batch = new BatchBuilder(wm);
+        sqlBuilder = new PreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> write = batch.visit(arg);
+            actions.add(write::set);
+            return write.arity();
+        });
     }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    protected int visitPreparedObject(Object argObject) {
-        final BoundWrite<Object> write = batch.visit(argObject);
-        actions.add(write::set);
-        return write.arity();
+    public void visitSQL(SQL sql) {
+        sqlBuilder.visitSQL(sql);
     }
 
     public PreparedStatement build(Connection connection) throws SQLException {
-        final PreparedStatement stmt = super.build(connection);
+        final PreparedStatement stmt = sqlBuilder.build(connection);
         final Map.Entry<Integer, List<Collection>> batchBuilt = batch.build();
 
         final List<Iterator> iterators = batchBuilt.getValue().stream().map(Collection::iterator).collect(Collectors.toList());
@@ -238,36 +267,43 @@ class BatchPreparedSQLBuilder extends AbstractPreparedSQLBuilder {
     }
 }
 
-class UnpreparedSQLBuilder extends AbstractUnpreparedSQLBuilder {
-    private final Write.Map wm;
+class BespokeUnpreparedSQLBuilder {
+    private final UnpreparedSQLBuilder sqlBuilder;
 
-    public UnpreparedSQLBuilder(Write.Map wm) {
-        this.wm = wm;
+    public BespokeUnpreparedSQLBuilder(Write.Map wm) {
+        sqlBuilder = new UnpreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> write = BespokePreparedSQLBuilder.getObjectBoundWrite(wm, arg);
+            return write.asSQL(arg);
+        });
     }
 
-    public List<String> visitUnpreparedObject(Object arg) {
-        final BoundWrite<Object> write = PreparedSQLBuilder.getObjectBoundWrite(wm, arg);
-        return write.asSQL(arg);
+    public void visitSQL(SQL sql) {
+        sqlBuilder.visitSQL(sql);
+    }
+
+    public String build() {
+        return sqlBuilder.build();
     }
 }
 
-class PreparedSQLBuilder extends AbstractPreparedSQLBuilder {
+class BespokePreparedSQLBuilder {
     private interface Action {
         void write(PreparedStatement stmt, IndexRef ref) throws SQLException;
     }
 
+    private final PreparedSQLBuilder sqlBuilder;
     private final List<Action> actions = new ArrayList<>();
 
-    private final Write.Map wm;
-
-    public PreparedSQLBuilder(Write.Map wm) {
-        this.wm = wm;
+    public BespokePreparedSQLBuilder(Write.Map wm) {
+        sqlBuilder = new PreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> write = getObjectBoundWrite(wm, arg);
+            actions.add((stmt, ref) -> write.set(stmt, ref, arg));
+            return write.arity();
+        });
     }
 
-    public int visitPreparedObject(Object arg) {
-        final BoundWrite<Object> write = getObjectBoundWrite(wm, arg);
-        actions.add((stmt, ref) -> write.set(stmt, ref, arg));
-        return write.arity();
+    public void visitSQL(SQL sql) {
+        sqlBuilder.visitSQL(sql);
     }
 
     @SuppressWarnings("unchecked")
@@ -284,7 +320,7 @@ class PreparedSQLBuilder extends AbstractPreparedSQLBuilder {
     }
 
     public PreparedStatement build(Connection connection) throws SQLException {
-        final PreparedStatement stmt = super.build(connection);
+        final PreparedStatement stmt = sqlBuilder.build(connection);
 
         final IndexRef ref = new IndexRef();
         for (Action action : actions) {
