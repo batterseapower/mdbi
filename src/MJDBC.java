@@ -63,6 +63,7 @@ public class MJDBC {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
 
+    // Note that the retry policy will only be used when executing a query against a connection with no open transaction
     public Supplier<Retry> getRetryPolicy() { return retryPolicy; }
     public MJDBC withRetryPolicy(Supplier<Retry> retryPolicy) {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
@@ -84,7 +85,7 @@ public class MJDBC {
                     return retry(c, () -> {
                         try {
                             return ps.executeLargeBatch();
-                        } catch (UnsupportedOperationException _) {
+                        } catch (UnsupportedOperationException _unsupported) {
                             final int[] ints = ps.executeBatch();
                             final long[] longs = new long[ints.length];
                             for (int i = 0; i < ints.length; i++) {
@@ -114,7 +115,7 @@ public class MJDBC {
                             } else {
                                 try {
                                     result[i] = s.executeLargeUpdate(x);
-                                } catch (UnsupportedOperationException _) {
+                                } catch (UnsupportedOperationException _unsupported) {
                                     supportsLargeUpdate = false;
                                     result[i] = s.executeUpdate(x);
                                 }
@@ -133,7 +134,7 @@ public class MJDBC {
         return query(sql, (ctxt, s) -> {
             try {
                 return s.executeLargeUpdate();
-            } catch (UnsupportedOperationException _) {
+            } catch (UnsupportedOperationException _unsupported) {
                 return (long)s.executeUpdate();
             }
         });

@@ -111,6 +111,7 @@ class BatchBuilder {
         this.wm = wm;
     }
 
+    @SuppressWarnings("unchecked")
     public BoundWrite<Object> visit(Object argObject) {
         if (!(argObject instanceof Collection)) {
             throw new IllegalArgumentException("Batch updates expect Collections, but you supplied a " + (argObject == null ? "null" : argObject.getClass().toString()));
@@ -150,7 +151,7 @@ class BatchBuilder {
     }
 
     public Map.Entry<Integer, List<Collection>> build() {
-        return new AbstractMap.SimpleImmutableEntry<Integer, List<Collection>>(size == null ? 0 : size, collections);
+        return new AbstractMap.SimpleImmutableEntry<>(size == null ? 0 : size, collections);
     }
 }
 
@@ -187,7 +188,7 @@ class BatchUnpreparedSQLBuilder {
                 result.add(UUID.randomUUID().toString());
             }
 
-            boundWrites.add(new AbstractMap.SimpleImmutableEntry<BoundWrite<Object>, List<String>>(boundWrite, result));
+            boundWrites.add(new AbstractMap.SimpleImmutableEntry<>(boundWrite, result));
             return result;
         });
     }
@@ -202,7 +203,7 @@ class BatchUnpreparedSQLBuilder {
         final int size = batchBuilt.getKey();
 
         final List<Iterator> iterators = batchBuilt.getValue().stream().map(Collection::iterator).collect(Collectors.toList());
-        return new AbstractMap.SimpleImmutableEntry<Integer, Iterator<String>>(
+        return new AbstractMap.SimpleImmutableEntry<>(
                 size,
                 new Iterator<String>() {
                     private int i = 0;
