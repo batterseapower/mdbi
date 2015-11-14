@@ -62,6 +62,16 @@ public class MJDBCTest {
         assertEquals("Max", row.name);
     }
 
+    @Test
+    public void tupleWrite() throws SQLException {
+        ctxt.registerWrite(Row.class, TupleWrite.Builder.<Row>create()
+                                                        .add(int.class,    r -> r.id)
+                                                        .add(String.class, r -> r.name)
+                                                        .build());
+        m.execute(SQL.of("insert into person (id, name) values (", new Row(1, "Max"), ")"));
+        assertEquals("Max", m.queryExactlyOne(SQL.of("select name from person"), String.class));
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void failIfClassUnregistered() throws SQLException {
         m.queryList(SQL.of("select * from person"), Row.class);
