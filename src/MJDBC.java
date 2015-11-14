@@ -40,11 +40,6 @@ public class MJDBC {
     private final boolean prepared;
     private final Supplier<Retry> retryPolicy;
 
-    // FIXME: retry deadlocks
-    //   What about if we execute these 3 against conn sequentialy:
-    //     update tab set x = 1
-    //     begin tran; update tab set x = 2
-    //     select x from tab  // <-- if this deadlocks then the rollback causes the update to be lost. If we just retry this statement we'll return 1 (unexpected).
     public MJDBC(Context context, Connection connection) {
         this(context, ConnectionObtainer.fromConnection(connection));
     }
@@ -86,16 +81,18 @@ public class MJDBC {
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final PreparedStatement ps = builder.build(c)) {
-                    try {
-                        return ps.executeLargeBatch();
-                    } catch (UnsupportedOperationException _) {
-                        final int[] ints = ps.executeBatch();
-                        final long[] longs = new long[ints.length];
-                        for (int i = 0; i < ints.length; i++) {
-                            longs[i] = ints[i];
+                    return retry(c, () -> {
+                        try {
+                            return ps.executeLargeBatch();
+                        } catch (UnsupportedOperationException _) {
+                            final int[] ints = ps.executeBatch();
+                            final long[] longs = new long[ints.length];
+                            for (int i = 0; i < ints.length; i++) {
+                                longs[i] = ints[i];
+                            }
+                            return longs;
                         }
-                        return longs;
-                    }
+                    });
                 }
             });
         } else {
@@ -105,26 +102,28 @@ public class MJDBC {
                 try (final Statement s = c.createStatement()) {
                     final Map.Entry<Integer, Iterator<String>> e = builder.build();
                     final Iterator<String> it = e.getValue();
-                    final long[] result = new long[e.getKey()];
 
-                    boolean supportsLargeUpdate = true;
-                    int i = 0;
-                    while (it.hasNext()) {
-                        final String x = it.next();
-                        if (!supportsLargeUpdate) {
-                            result[i] = s.executeUpdate(x);
-                        } else {
-                            try {
-                                result[i] = s.executeLargeUpdate(x);
-                            } catch (UnsupportedOperationException _) {
-                                supportsLargeUpdate = false;
+                    return retry(c, () -> {
+                        final long[] result = new long[e.getKey()];
+                        boolean supportsLargeUpdate = true;
+                        int i = 0;
+                        while (it.hasNext()) {
+                            final String x = it.next();
+                            if (!supportsLargeUpdate) {
                                 result[i] = s.executeUpdate(x);
+                            } else {
+                                try {
+                                    result[i] = s.executeLargeUpdate(x);
+                                } catch (UnsupportedOperationException _) {
+                                    supportsLargeUpdate = false;
+                                    result[i] = s.executeUpdate(x);
+                                }
                             }
+                            i++;
                         }
-                        i++;
-                    }
 
-                    return result;
+                        return result;
+                    });
                 }
             });
         }
@@ -162,7 +161,7 @@ public class MJDBC {
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final PreparedStatement ps = builder.build(c)) {
-                    return batchRead.get(context.readers, new PreparedStatementlike(ps));
+                    return retry(c, () -> batchRead.get(context.readers, new PreparedStatementlike(ps)));
                 }
             });
         } else {
@@ -170,9 +169,31 @@ public class MJDBC {
             builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    return batchRead.get(context.readers, new UnpreparedStamentlike(s, builder.build()));
+                    return retry(c, () -> batchRead.get(context.readers, new UnpreparedStamentlike(s, builder.build())));
                 }
             });
+        }
+    }
+
+    private <T> T retry(Connection c, Transactionally.Action<T> act) throws SQLException {
+        if (!c.getAutoCommit()) {
+            // Already in transaction, we can't safely retry because failure of the SQL action we
+            // are trying to do might cause rollback. Example: what if we execute these 3 one after another:
+            //   update tab set x = 1
+            //   begin tran; update tab set x = 2
+            //   select x from tab  // <-- if this deadlocks then the rollback causes the update to be lost. If we just retry this statement we'll return 1 (unexpected).
+            return act.run();
+        } else {
+            final Retry retry = retryPolicy.get();
+            while (true) {
+                try {
+                    return Transactionally.run(c, act);
+                } catch (RuntimeException e) {
+                    retry.consider(e);
+                } catch (SQLException e) {
+                    retry.consider(e);
+                }
+            }
         }
     }
 }

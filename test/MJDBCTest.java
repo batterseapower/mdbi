@@ -249,4 +249,10 @@ public class MJDBCTest {
         assertEquals(0, m.queryList(SQL.of("select 1 where 1 in ", In.of(2)), String.class).size());
         assertEquals(0, m.queryList(SQL.of("select 1 where 1 in ", In.of()), String.class).size());
     }
+
+    @Test
+    public void retryDeadlocks() throws SQLException {
+        // FIXME: test deadlocks
+        assertTrue(false);
+    }
 }
