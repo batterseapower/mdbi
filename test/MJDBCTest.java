@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MJDBCTest {
     private Context ctxt;
@@ -166,6 +167,22 @@ public class MJDBCTest {
         final List<String> names = Arrays.asList(null, null);
         m.updateBatch(SQL.of("insert into person (id, name) values(", ids, ", ", names, ")"));
         assertEquals(Arrays.asList("1null", "2null"), m.queryList(SQL.of("select id || ifnull(name, 'null') from person order by id"), String.class));
+    }
+
+    private void assertDoublesWork(boolean prepared) throws SQLException {
+        assertEquals("1.2345678E7", Double.toString(12345678));
+        assertEquals(12345678.0, m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", 12345678.0), double.class).doubleValue(), 0.00001);
+        assertEquals(12345678.0, m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", 12345678.0), Double.class).doubleValue(), 0.00001);
+        assertTrue(Double.isNaN(m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", null), double.class).doubleValue()));
+        assertEquals(null,      m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", null), Double.class));
+        assertTrue(Double.isNaN(m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", Double.NaN), double.class).doubleValue()));
+        assertEquals(null,      m.withPrepared(prepared).queryExactlyOne(SQL.of("SELECT ", Double.NaN), Double.class));
+    }
+
+    @Test
+    public void doubles() throws SQLException {
+        assertDoublesWork(false);
+        assertDoublesWork(true);
     }
 
     public static class Bean {

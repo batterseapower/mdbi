@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 
 interface Write<T> {
-    Write<Integer> INT = ctxt -> new BoundWrite<Integer>() {
+    Write<Integer> PRIM_INT = ctxt -> new BoundWrite<Integer>() {
         @Override
         public int arity() {
             return 1;
@@ -81,25 +81,60 @@ interface Write<T> {
             return Collections.singletonList("'" + x.toString() + "'");
         }
     };
-    Write<LocalDateTime> LOCAL_DATE_TIME = new Write<LocalDateTime>() {
+    Write<LocalDateTime> LOCAL_DATE_TIME = ctxt -> new BoundWrite<LocalDateTime>() {
         @Override
-        public BoundWrite<LocalDateTime> bind(Map ctxt) {
-            return new BoundWrite<LocalDateTime>() {
-                @Override
-                public int arity() {
-                    return 1;
-                }
+        public int arity() {
+            return 1;
+        }
 
-                @Override
-                public void set(PreparedStatement s, IndexRef ix, LocalDateTime x) throws SQLException {
-                    s.setTimestamp(ix.x++, new Timestamp(x.atZone(Time.UTC_ZONE_ID).toInstant().toEpochMilli()), Time.UTC_CALENDAR.get());
-                }
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, LocalDateTime x) throws SQLException {
+            s.setTimestamp(ix.x++, new Timestamp(x.atZone(Time.UTC_ZONE_ID).toInstant().toEpochMilli()), Time.UTC_CALENDAR.get());
+        }
 
-                @Override
-                public List<String> asSQL(LocalDateTime x) {
-                    return Collections.singletonList("'" + x.toString() + "'");
-                }
-            };
+        @Override
+        public List<String> asSQL(LocalDateTime x) {
+            return Collections.singletonList("'" + x.toString() + "'");
+        }
+    };
+    Write<Double> PRIM_DOUBLE = ctxt -> new BoundWrite<Double>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, Double x) throws SQLException {
+            if (Double.isNaN(x)) {
+                s.setNull(ix.x++, Types.DOUBLE);
+            } else {
+                s.setDouble(ix.x++, x);
+            }
+        }
+
+        @Override
+        public List<String> asSQL(Double x) {
+            return Collections.singletonList(Double.isNaN(x) ? "null" : Double.toString(x));
+        }
+    };
+    Write<Double> DOUBLE = ctxt -> new BoundWrite<Double>() {
+        @Override
+        public int arity() {
+            return 1;
+        }
+
+        @Override
+        public void set(PreparedStatement s, IndexRef ix, Double x) throws SQLException {
+            if (x == null || Double.isNaN(x)) {
+                s.setNull(ix.x++, Types.DOUBLE);
+            } else {
+                s.setDouble(ix.x++, x);
+            }
+        }
+
+        @Override
+        public List<String> asSQL(Double x) {
+            return Collections.singletonList((x == null || Double.isNaN(x)) ? "null" : Double.toString(x));
         }
     };
 

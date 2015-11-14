@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.TimeZone;
 
 public interface Read<T> {
-    Read<Integer> INT = new Read<Integer>() {
+    Read<Integer> PRIM_INT = new Read<Integer>() {
         @Override
         public Class<Integer> getElementClass() {
             return int.class;
@@ -72,6 +72,36 @@ public interface Read<T> {
         @Override
         public BoundRead<LocalDateTime> bind(Map ctxt) {
             return (rs, ix) -> Instant.ofEpochMilli(rs.getTimestamp(ix.x++, Time.UTC_CALENDAR.get()).getTime()).atZone(Time.UTC_ZONE_ID).toLocalDateTime();
+        }
+    };
+    Read<Double> PRIM_DOUBLE = new Read<Double>() {
+        @Override
+        public Class<Double> getElementClass() {
+            return double.class;
+        }
+
+        @Override
+        public BoundRead<Double> bind(Map ctxt) {
+            return (rs, ix) -> {
+                final double result = rs.getDouble(ix.x++);
+                if (rs.wasNull()) return Double.NaN;
+                return result;
+            };
+        }
+    };
+    Read<Double> DOUBLE = new Read<Double>() {
+        @Override
+        public Class<Double> getElementClass() {
+            return Double.class;
+        }
+
+        @Override
+        public BoundRead<Double> bind(Map ctxt) {
+            return (rs, ix) -> {
+                final double result = rs.getDouble(ix.x++);
+                if (rs.wasNull()) return null;
+                return result;
+            };
         }
     };
 

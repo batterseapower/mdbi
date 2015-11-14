@@ -1,9 +1,5 @@
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
 
 public class Context {
     final Read.Map readers = new Read.Map();
@@ -11,10 +7,12 @@ public class Context {
 
     public static Context createDefault() {
         final Context context = new Context();
-        context.register(int.class, Write.INT, Read.INT);
-        context.register(Integer.class, Write.INTEGER, Read.INTEGER);
-        context.register(String.class, Write.STRING, Read.STRING);
-        context.register(LocalDate.class, Write.LOCAL_DATE, Read.LOCAL_DATE);
+        context.register(int.class,           Write.PRIM_INT,        Read.PRIM_INT);
+        context.register(Integer.class,       Write.INTEGER,         Read.INTEGER);
+        context.register(double.class,        Write.PRIM_DOUBLE,     Read.PRIM_DOUBLE);
+        context.register(Double.class,        Write.DOUBLE,          Read.DOUBLE);
+        context.register(String.class,        Write.STRING,          Read.STRING);
+        context.register(LocalDate.class,     Write.LOCAL_DATE,      Read.LOCAL_DATE);
         context.register(LocalDateTime.class, Write.LOCAL_DATE_TIME, Read.LOCAL_DATE_TIME);
 
         // FIXME: register more default stuff
