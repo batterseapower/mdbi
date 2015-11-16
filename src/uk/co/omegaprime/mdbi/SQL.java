@@ -3,6 +3,7 @@ package uk.co.omegaprime.mdbi;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
+import java.util.function.BiFunction;
 
 @ParametersAreNonnullByDefault
 public final class SQL {
@@ -99,22 +100,27 @@ public final class SQL {
 
     @SafeVarargs
     public final <T> SQL in(T... xs) {
+        return in(Arrays.<T>asList(xs));
+    }
+
+    public <T> SQL in(Iterable<T> xs) {
+        return inCore(xs, SQL::$);
+    }
+
+    public final <T> SQL in(Class<T> klass, Iterable<T> xs) {
+        return in(Writes.useContext(klass), xs);
+    }
+
+    public final <T> SQL in(Write<T> write, Iterable<T> xs) {
+        return inCore(xs, (sql, x) -> sql.$(write, x));
+    }
+
+    private <T> SQL inCore(Iterable<T> xs, BiFunction<SQL, T, SQL> f) {
         // Exploit the fact that 'null not in (null)' to avoid generating nullary IN clauses:
         // systems like SQL Server can't parse them
         SQL result = sql("in (null");
         for (T x : xs) {
-            result = result.sql(",").$(x);
-        }
-
-        return result.sql(")");
-    }
-
-    public SQL in(SQL... xs) {
-        // Exploit the fact that 'null not in (null)' to avoid generating nullary IN clauses:
-        // systems like SQL Server can't parse them
-        SQL result = sql("in (null");
-        for (SQL x : xs) {
-            result = result.sql(",").sql(x);
+            result = f.apply(result.sql(","), x);
         }
 
         return result.sql(")");
