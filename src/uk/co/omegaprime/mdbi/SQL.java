@@ -27,12 +27,11 @@ public final class SQL {
         }
     }
 
-    // Elements are either Hole, BatchHole, or String
-    // TODO: avoid copying this so much
-    final List<Object> args;
+    // Elements of list are either Hole, BatchHole, or String
+    final SnocList<Object> args;
     final @Nullable Integer size;
 
-    SQL(List<Object> args, @Nullable Integer size) {
+    SQL(SnocList<Object> args, @Nullable Integer size) {
         this.args = args;
         this.size = size;
     }
@@ -48,11 +47,11 @@ public final class SQL {
     }
 
     public <T> SQL $(Class<T> klass, @Nullable T x) {
-        return snoc(new Hole<>(x, new ContextWrite<>(klass)), size);
+        return new SQL(args.snoc(new Hole<>(x, new ContextWrite<>(klass))), size);
     }
 
     public <T> SQL $(Write<T> write, @Nullable T x) {
-        return snoc(new Hole<>(x, write), size);
+        return new SQL(args.snoc(new Hole<>(x, write)), size);
     }
 
     @SuppressWarnings("unchecked")
@@ -87,11 +86,11 @@ public final class SQL {
             throw new IllegalArgumentException("All collections supplied to a batch SQL statement must be of the same size, but you had both sizes " + size + " and " + x.size());
         }
 
-        return snoc(new BatchHole<>(x, write), x.size());
+        return new SQL(args.snoc(new BatchHole<>(x, write)), x.size());
     }
 
     public SQL sql(SQL x) {
-        return snocs(x.args, size);
+        return new SQL(args.snocs(x.args), size);
     }
 
     public SQL sql(String x) {
@@ -124,18 +123,6 @@ public final class SQL {
         }
 
         return result.sql(")");
-    }
-
-    private SQL snoc(Object x, @Nullable Integer size) {
-        final List<Object> newArgs = new ArrayList<>(args);
-        newArgs.add(x);
-        return new SQL(newArgs, size);
-    }
-
-    private SQL snocs(List<Object> x, @Nullable Integer size) {
-        final List<Object> newArgs = new ArrayList<>(args);
-        newArgs.addAll(x);
-        return new SQL(newArgs, size);
     }
 
     @Override

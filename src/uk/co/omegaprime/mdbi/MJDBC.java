@@ -73,7 +73,7 @@ public class MJDBC {
     }
 
     public static SQL sql(String x) {
-        return new SQL(Collections.singletonList(x), null);
+        return new SQL(SnocList.singleton(x), null);
     }
 
     public void execute(SQL sql) throws SQLException {
