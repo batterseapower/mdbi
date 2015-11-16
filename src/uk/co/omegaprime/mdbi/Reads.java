@@ -191,8 +191,8 @@ public class Reads {
             }
 
             @Override
-            public BoundRead<U> bind(Map ctxt) {
-                final BoundRead<T> boundRead = read.bind(ctxt);
+            public BoundRead<? extends U> bind(Map ctxt) {
+                final BoundRead<? extends T> boundRead = read.bind(ctxt);
                 return (rs, ix) -> f.apply(boundRead.get(rs, ix));
             }
         };
@@ -208,8 +208,8 @@ public class Reads {
         }
 
         @SuppressWarnings("unchecked")
-        public <T> Read<T> get(Class<T> klass) {
-            final Read<T> result = (Read<T>) map.get(klass);
+        public <T> Read<? extends T> get(Class<T> klass) {
+            final Read<? extends T> result = (Read<? extends T>) map.get(klass);
             if (result == null) {
                 throw new IllegalArgumentException("Don't know how to transfer " + klass + " objects from JDBC");
             } else {

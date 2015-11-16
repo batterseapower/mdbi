@@ -9,17 +9,17 @@ import java.util.List;
 import java.util.function.Function;
 
 class TupleWrite<T> implements Write<T> {
-    private final List<java.util.Map.Entry<Write<?>, Function<T, ?>>> args;
+    private final List<Write<T>> args;
 
-    public TupleWrite(List<java.util.Map.Entry<Write<?>, Function<T, ?>>> args) {
+    public TupleWrite(List<Write<T>> args) {
         this.args = args;
     }
 
     @Override
     public BoundWrite<T> bind(Writes.Map ctxt) {
-        final List<BoundWrite<?>> boundWrites = new ArrayList<>(args.size());
-        for (java.util.Map.Entry<Write<?>, Function<T, ?>> e : args) {
-            boundWrites.add(e.getKey().bind(ctxt));
+        final List<BoundWrite<? super T>> boundWrites = new ArrayList<>(args.size());
+        for (Write<T> write : args) {
+            boundWrites.add(write.bind(ctxt));
         }
         return new BoundWrite<T>() {
             @Override
@@ -28,20 +28,18 @@ class TupleWrite<T> implements Write<T> {
             }
 
             @Override
-            @SuppressWarnings("unchecked")
             public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, T x) throws SQLException {
-                for (int i = 0; i < boundWrites.size(); i++) {
-                    ((BoundWrite<Object>)boundWrites.get(i)).set(s, ix, args.get(i).getValue().apply(x));
+                for (BoundWrite<? super T> write : boundWrites) {
+                    write.set(s, ix, x);
                 }
             }
 
             @Nonnull
             @Override
-            @SuppressWarnings("unchecked")
             public List<String> asSQL(T x) {
                 final List<String> result = new ArrayList<>();
-                for (int i = 0; i < boundWrites.size(); i++) {
-                    result.addAll(((BoundWrite<Object>)boundWrites.get(i)).asSQL(args.get(i).getValue().apply(x)));
+                for (BoundWrite<? super T> write : boundWrites) {
+                    result.addAll(write.asSQL(x));
                 }
                 return result;
             }

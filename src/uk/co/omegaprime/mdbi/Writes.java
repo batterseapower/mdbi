@@ -229,7 +229,7 @@ public class Writes {
 
     public static <T, U> Write<U> map(Write<T> write, Function<U, T> f) {
         return ctxt -> {
-            final BoundWrite<T> boundWrite = write.bind(ctxt);
+            final BoundWrite<? super T> boundWrite = write.bind(ctxt);
             return new BoundWrite<U>() {
                 @Override
                 public int arity() {
@@ -286,8 +286,8 @@ public class Writes {
         }
 
         @SuppressWarnings("unchecked")
-        public <T> Write<T> get(Class<T> klass) {
-            final Write<T> result = (Write<T>) map.get(klass);
+        public <T> Write<? super T> get(Class<T> klass) {
+            final Write<? super T> result = (Write<? super T>) map.get(klass);
             if (result == null) {
                 throw new IllegalArgumentException("Don't know how to transfer " + klass + " objects to JDBC");
             } else {

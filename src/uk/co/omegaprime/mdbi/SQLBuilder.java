@@ -92,14 +92,13 @@ class BatchBuilder {
         this.wm = wm;
     }
 
-    @SuppressWarnings("unchecked")
-    public BoundWrite<Object> visitHole(Object arg) {
+    public BoundWrite<?> visitHole(Object arg) {
         if (arg instanceof SQL.Hole) {
-            final SQL.Hole hole = (SQL.Hole) arg;
+            final SQL.Hole<?> hole = (SQL.Hole<?>) arg;
             collections.add(Collections.nCopies(size, hole.object));
             return hole.write.bind(wm);
         } else if (arg instanceof SQL.BatchHole) {
-            final SQL.BatchHole hole = (SQL.BatchHole) arg;
+            final SQL.BatchHole<?> hole = (SQL.BatchHole<?>) arg;
             collections.add(hole.objects);
             return hole.write.bind(wm);
         } else {
@@ -119,9 +118,9 @@ class BatchUnpreparedSQLBuilder {
     public static Map.Entry<Integer, Iterator<String>> build(SQL sql, Writes.Map wm) {
         final BatchBuilder batchBuilder = new BatchBuilder(sql.size(), wm);
 
-        final List<Map.Entry<BoundWrite<Object>, List<String>>> boundWrites = new ArrayList<>();
+        final List<Map.Entry<BoundWrite<?>, List<String>>> boundWrites = new ArrayList<>();
         final UnpreparedSQLBuilder sqlBuilder = new UnpreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> boundWrite = batchBuilder.visitHole(arg);
+            final BoundWrite<?> boundWrite = batchBuilder.visitHole(arg);
 
             final List<String> result = new ArrayList<>();
             for (int i = 0; i < boundWrite.arity(); i++) {
@@ -149,11 +148,12 @@ class BatchUnpreparedSQLBuilder {
                     }
 
                     @Override
+                    @SuppressWarnings("unchecked")
                     public String next() {
                         String result = sqlString;
                         for (int j = 0; j < boundWrites.size(); j++) {
-                            final Map.Entry<BoundWrite<Object>, List<String>> boundWrite = boundWrites.get(j);
-                            final List<String> replacements = boundWrite.getKey().asSQL(iterators.get(j).next());
+                            final Map.Entry<BoundWrite<?>, List<String>> boundWrite = boundWrites.get(j);
+                            final List<String> replacements = ((BoundWrite<Object>)boundWrite.getKey()).asSQL(iterators.get(j).next());
                             for (int k = 0; k < boundWrite.getValue().size(); k++) {
                                 result = result.replace(boundWrite.getValue().get(k), replacements.get(k));
                             }
@@ -180,7 +180,7 @@ class BatchPreparedSQLBuilder {
 
         final List<Action> actions = new ArrayList<>();
         final PreparedSQLBuilder sqlBuilder = new PreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> write = batch.visitHole(arg);
+            final BoundWrite<?> write = batch.visitHole(arg);
             actions.add(write::set);
             return write.arity();
         });

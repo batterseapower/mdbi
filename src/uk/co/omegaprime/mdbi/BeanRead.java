@@ -16,12 +16,11 @@ class BeanRead<T> implements Read<T> {
     private final Method[] setters;
     private final Collection<Read<?>> reads;
 
-    @SuppressWarnings("unchecked")
     public BeanRead(Class<T> klass, String... fields) {
         this.klass = klass;
         this.constructor = Reflection.getBeanConstructor(klass);
         this.setters = Reflection.lookupBeanSetters(klass, Arrays.asList(fields));
-        this.reads = Arrays.asList(this.setters).stream().map(m -> new ContextRead<>((Class<Object>) (m.getParameterTypes()[0]))).collect(Collectors.toList());
+        this.reads = Arrays.asList(this.setters).stream().map(m -> new ContextRead<>(m.getParameterTypes()[0])).collect(Collectors.toList());
     }
 
     public BeanRead(Class<T> klass, Collection<String> fields, Collection<Read<?>> reads) {

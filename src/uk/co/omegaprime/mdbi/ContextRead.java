@@ -13,7 +13,7 @@ class ContextRead<T> implements Read<T> {
     }
 
     @Override
-    public BoundRead<T> bind(Reads.Map ctxt) {
+    public BoundRead<? extends T> bind(Reads.Map ctxt) {
         return ctxt.get(klass).bind(ctxt);
     }
 }

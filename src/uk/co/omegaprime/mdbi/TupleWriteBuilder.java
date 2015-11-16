@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 public class TupleWriteBuilder<T> {
-    private final List<Map.Entry<Write<?>, Function<T, ?>>> args = new ArrayList<>();
+    private final List<Write<T>> args = new ArrayList<>();
 
     private TupleWriteBuilder() { }
     public static <T> TupleWriteBuilder<T> create() { return new TupleWriteBuilder<>(); }
@@ -17,7 +17,7 @@ public class TupleWriteBuilder<T> {
     }
 
     public <U> TupleWriteBuilder<T> add(Write<U> write, Function<T, U> f) {
-        args.add(new AbstractMap.SimpleImmutableEntry<>(write, f));
+        args.add(Writes.map(write, f));
         return this;
     }
 

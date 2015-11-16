@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-// TODO: cleanup variance
 public class MJDBC {
     private interface ConnectionObtainer {
         <T> T with(ConnectionUser<T> user) throws SQLException;
