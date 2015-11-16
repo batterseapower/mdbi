@@ -1,6 +1,6 @@
 package uk.co.omegaprime.mdbi;
 
-import javax.annotation.Nonnull;
+import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,33 +18,11 @@ class SQLBuilder {
     }
 
     public void visitSQL(SQL sql) {
-        boolean nextMayBeParam = false;
-        for (int i = 0; i < sql.args.length; i++) {
-            final Object arg = sql.args[i];
-            if (arg instanceof SQL) {
-                visitSQL((SQL)arg);
-                nextMayBeParam = true;
-            } else if (arg instanceof In) {
-                final In in = (In)arg;
-                // Exploit the fact that 'null not in (null)' to avoid generating nullary IN clauses:
-                // systems like SQL Server can't parse them
-                stringBuilder.append("(null");
-                for (int j = 0; j < in.args.length; j++) {
-                    stringBuilder.append(',');
-                    if (in.args[j] instanceof SQL) {
-                        visitSQL((SQL)in.args[j]);
-                    } else {
-                        visitHole.accept(in.args[j]);
-                    }
-                }
-                stringBuilder.append(')');
-                nextMayBeParam = false;
-            } else if (!nextMayBeParam && (arg instanceof String)) {
-                visitSQLLiteral((String)arg);
-                nextMayBeParam = true;
+        for (Object arg : sql.args) {
+            if (arg instanceof String) {
+                visitSQLLiteral((String) arg);
             } else {
                 visitHole.accept(arg);
-                nextMayBeParam = false;
             }
         }
     }
@@ -104,86 +82,46 @@ class UnpreparedSQLBuilder {
 }
 
 class BatchBuilder {
+    private final int size;
     private final Writes.Map wm;
 
     private final List<Collection> collections = new ArrayList<>();
-    private Integer size;
 
-    public BatchBuilder(Writes.Map wm) {
+    public BatchBuilder(int size, Writes.Map wm) {
+        this.size = size;
         this.wm = wm;
     }
 
     @SuppressWarnings("unchecked")
-    public BoundWrite<Object> visit(Object argObject) {
-        if (!(argObject instanceof Collection)) {
-            throw new IllegalArgumentException("Batch updates expect Collections, but you supplied a " + (argObject == null ? "null" : argObject.getClass().toString()));
-        }
-
-        final Collection arg = (Collection) argObject;
-        if (size == null) {
-            size = arg.size();
-        } else if (size != arg.size()) {
-            throw new IllegalArgumentException("All collections supplied to batchBuilder update must be of the same size, but you had both sizes " + size + " and " + arg.size());
-        }
-
-        collections.add(arg);
-
-        final Class<?> klass;
-        if (arg.size() > 0) {
-            final Iterator it = arg.iterator();
-            Object example = it.next();
-            while (example == null && it.hasNext()) {
-                example = it.next();
-            }
-
-            klass = example == null ? null : example.getClass();
+    public BoundWrite<Object> visitHole(Object arg) {
+        if (arg instanceof SQL.Hole) {
+            final SQL.Hole hole = (SQL.Hole) arg;
+            collections.add(Collections.nCopies(size, hole.object));
+            return hole.write.bind(wm);
+        } else if (arg instanceof SQL.BatchHole) {
+            final SQL.BatchHole hole = (SQL.BatchHole) arg;
+            collections.add(hole.objects);
+            return hole.write.bind(wm);
         } else {
-            klass = null;
-        }
-
-        // FIXME: have bind() take the object too, and then find one binder per elt here?
-        // Would mean we could have a Collection Write class that Just Works, rather than the "In" special case... (except for the nullary wrinkle..)
-        if (klass == null) {
-            // We know for sure that all elements of the column are null
-            // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.
-            return new BoundWriteNull();
-        } else {
-            return (BoundWrite<Object>)wm.get(klass).bind(wm);
+            throw new IllegalStateException("Not expecting " + arg);
         }
     }
 
-    public Map.Entry<Integer, List<Collection>> build() {
-        return new AbstractMap.SimpleImmutableEntry<>(size == null ? 0 : size, collections);
+    public List<Collection> build() {
+        return collections;
     }
 }
 
-class BoundWriteNull implements BoundWrite<Object> {
-    @Override
-    public int arity() {
-        return 1;
-    }
-
-    @Override
-    public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, Object x) throws SQLException {
-        s.setObject(ix.take(), null);
-    }
-
-    @Nonnull
-    @Override
-    public List<String> asSQL(Object x) {
-        return Collections.singletonList("null");
-    }
-}
-
+@ParametersAreNonnullByDefault
 class BatchUnpreparedSQLBuilder {
-    private final BatchBuilder batchBuilder;
-    private final UnpreparedSQLBuilder sqlBuilder;
-    private final List<Map.Entry<BoundWrite<Object>, List<String>>> boundWrites = new ArrayList<>();
+    private BatchUnpreparedSQLBuilder() {}
 
-    public BatchUnpreparedSQLBuilder(Writes.Map wm) {
-        batchBuilder = new BatchBuilder(wm);
-        sqlBuilder = new UnpreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> boundWrite = batchBuilder.visit(arg);
+    public static Map.Entry<Integer, Iterator<String>> build(SQL sql, Writes.Map wm) {
+        final BatchBuilder batchBuilder = new BatchBuilder(sql.size(), wm);
+
+        final List<Map.Entry<BoundWrite<Object>, List<String>>> boundWrites = new ArrayList<>();
+        final UnpreparedSQLBuilder sqlBuilder = new UnpreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> boundWrite = batchBuilder.visitHole(arg);
 
             final List<String> result = new ArrayList<>();
             for (int i = 0; i < boundWrite.arity(); i++) {
@@ -193,31 +131,26 @@ class BatchUnpreparedSQLBuilder {
             boundWrites.add(new AbstractMap.SimpleImmutableEntry<>(boundWrite, result));
             return result;
         });
-    }
 
-    public void visitSQL(SQL sql) {
         sqlBuilder.visitSQL(sql);
-    }
 
-    public Map.Entry<Integer, Iterator<String>> build() {
-        final String sql = sqlBuilder.build();
-        final Map.Entry<Integer, List<Collection>> batchBuilt = batchBuilder.build();
-        final int size = batchBuilt.getKey();
+        final String sqlString = sqlBuilder.build();
+        final List<Collection> batchBuilt = batchBuilder.build();
 
-        final List<Iterator> iterators = batchBuilt.getValue().stream().map(Collection::iterator).collect(Collectors.toList());
+        final List<Iterator> iterators = batchBuilt.stream().map(Collection::iterator).collect(Collectors.toList());
         return new AbstractMap.SimpleImmutableEntry<>(
-                size,
+                sql.size(),
                 new Iterator<String>() {
                     private int i = 0;
 
                     @Override
                     public boolean hasNext() {
-                        return i < size;
+                        return i < sql.size();
                     }
 
                     @Override
                     public String next() {
-                        String result = sql;
+                        String result = sqlString;
                         for (int j = 0; j < boundWrites.size(); j++) {
                             final Map.Entry<BoundWrite<Object>, List<String>> boundWrite = boundWrites.get(j);
                             final List<String> replacements = boundWrite.getKey().asSQL(iterators.get(j).next());
@@ -233,34 +166,32 @@ class BatchUnpreparedSQLBuilder {
     }
 }
 
+@ParametersAreNonnullByDefault
 class BatchPreparedSQLBuilder {
     private interface Action {
         void write(PreparedStatement stmt, IndexRef ref, Object arg) throws SQLException;
     }
 
-    private final BatchBuilder batch;
-    private final PreparedSQLBuilder sqlBuilder;
-    private final List<Action> actions = new ArrayList<>();
+    private BatchPreparedSQLBuilder() {}
 
-    public BatchPreparedSQLBuilder(Writes.Map wm) {
-        this.batch = new BatchBuilder(wm);
-        sqlBuilder = new PreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> write = batch.visit(arg);
+    public static PreparedStatement build(SQL sql, Writes.Map wm, Connection connection) throws SQLException {
+        final int size = sql.size();
+        final BatchBuilder batch = new BatchBuilder(size, wm);
+
+        final List<Action> actions = new ArrayList<>();
+        final PreparedSQLBuilder sqlBuilder = new PreparedSQLBuilder(arg -> {
+            final BoundWrite<Object> write = batch.visitHole(arg);
             actions.add(write::set);
             return write.arity();
         });
-    }
 
-    public void visitSQL(SQL sql) {
         sqlBuilder.visitSQL(sql);
-    }
 
-    public PreparedStatement build(Connection connection) throws SQLException {
         final PreparedStatement stmt = sqlBuilder.build(connection);
-        final Map.Entry<Integer, List<Collection>> batchBuilt = batch.build();
+        final List<Collection> batchBuilt = batch.build();
 
-        final List<Iterator> iterators = batchBuilt.getValue().stream().map(Collection::iterator).collect(Collectors.toList());
-        for (int i = 0; i < batchBuilt.getKey(); i++) {
+        final List<Iterator> iterators = batchBuilt.stream().map(Collection::iterator).collect(Collectors.toList());
+        for (int i = 0; i < size; i++) {
             final IndexRef ref = new IndexRef();
             for (int j = 0; j < iterators.size(); j++) {
                 actions.get(j).write(stmt, ref, iterators.get(j).next());
@@ -273,20 +204,16 @@ class BatchPreparedSQLBuilder {
 }
 
 class BespokeUnpreparedSQLBuilder {
-    private final UnpreparedSQLBuilder sqlBuilder;
+    private BespokeUnpreparedSQLBuilder() {}
 
-    public BespokeUnpreparedSQLBuilder(Writes.Map wm) {
-        sqlBuilder = new UnpreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> write = BespokePreparedSQLBuilder.getObjectBoundWrite(wm, arg);
-            return write.asSQL(arg);
+    @SuppressWarnings("unchecked")
+    public static String build(SQL sql, Writes.Map wm) {
+        final UnpreparedSQLBuilder sqlBuilder = new UnpreparedSQLBuilder(arg -> {
+            final SQL.Hole<?> hole = BespokePreparedSQLBuilder.unwrapHole(arg);
+            return ((SQL.Hole<Object>)hole).write.bind(wm).asSQL(hole.object);
         });
-    }
 
-    public void visitSQL(SQL sql) {
         sqlBuilder.visitSQL(sql);
-    }
-
-    public String build() {
         return sqlBuilder.build();
     }
 }
@@ -296,35 +223,21 @@ class BespokePreparedSQLBuilder {
         void write(PreparedStatement stmt, IndexRef ref) throws SQLException;
     }
 
-    private final PreparedSQLBuilder sqlBuilder;
-    private final List<Action> actions = new ArrayList<>();
-
-    public BespokePreparedSQLBuilder(Writes.Map wm) {
-        sqlBuilder = new PreparedSQLBuilder(arg -> {
-            final BoundWrite<Object> write = getObjectBoundWrite(wm, arg);
-            actions.add((stmt, ref) -> write.set(stmt, ref, arg));
-            return write.arity();
-        });
-    }
-
-    public void visitSQL(SQL sql) {
-        sqlBuilder.visitSQL(sql);
-    }
+    private BespokePreparedSQLBuilder() {}
 
     @SuppressWarnings("unchecked")
-    static BoundWrite<Object> getObjectBoundWrite(Writes.Map wm, Object arg) {
-        BoundWrite<Object> write;
-        if (arg == null) {
-            // TODO: this is a bit dodgy! We should at least provide some way to indicate the type explicitly if you want to avoid ever hitting this case.
-            write = new BoundWriteNull();
-        } else {
-            final Class<?> klass = arg.getClass();
-            write = (BoundWrite<Object>)wm.get(klass).bind(wm);
-        }
-        return write;
-    }
+    public static PreparedStatement build(SQL sql, Writes.Map wm, Connection connection) throws SQLException {
+        final PreparedSQLBuilder sqlBuilder;
+        final List<Action> actions = new ArrayList<>();
 
-    public PreparedStatement build(Connection connection) throws SQLException {
+        sqlBuilder = new PreparedSQLBuilder(arg -> {
+            final SQL.Hole<?> hole = unwrapHole(arg);
+            final BoundWrite<?> boundWrite = hole.write.bind(wm);
+            actions.add((stmt, ref) -> ((BoundWrite<Object>) boundWrite).set(stmt, ref, hole.object));
+            return boundWrite.arity();
+        });
+
+        sqlBuilder.visitSQL(sql);
         final PreparedStatement stmt = sqlBuilder.build(connection);
 
         final IndexRef ref = new IndexRef();
@@ -333,5 +246,15 @@ class BespokePreparedSQLBuilder {
         }
 
         return stmt;
+    }
+
+    static SQL.Hole<?> unwrapHole(Object arg) {
+        if (arg instanceof SQL.Hole) {
+            return (SQL.Hole)arg;
+        } else if (arg instanceof SQL.BatchHole) {
+            throw new IllegalArgumentException("This SQL statement has some batched parts, but you are trying to execute it in unbatched mode");
+        } else {
+            throw new IllegalStateException("Not expecting " + arg);
+        }
     }
 }

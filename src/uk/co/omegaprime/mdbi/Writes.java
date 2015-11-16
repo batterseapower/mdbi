@@ -215,6 +215,17 @@ public class Writes {
         return new BeanWrite<>(klass, fields, reads);
     }
 
+    public static <T> Write<T> nullReference() {
+        return new AbstractUnaryWrite<T>() {
+            @Override String asSQL(@Nullable T x) { return "null"; }
+
+            @Override
+            void set(PreparedStatement s, int ix, @Nullable T x) throws SQLException {
+                s.setObject(ix, null);
+            }
+        };
+    }
+
     private Writes() {}
 
     private static abstract class AbstractUnaryWrite<T> implements Write<T> {

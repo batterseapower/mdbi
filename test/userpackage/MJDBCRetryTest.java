@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.omegaprime.mdbi.MJDBC.sql;
 
 public class MJDBCRetryTest {
     @Rule
@@ -60,11 +61,11 @@ public class MJDBCRetryTest {
             // https://github.com/xerial/sqlite-jdbc/pull/72
             final MJDBC m2 = new MJDBC(ctxt, conn2).withPrepared(false);
 
-            m1.execute(SQL.of("create table tab (id int)"));
-            m1.execute(SQL.of("insert into tab (id) values (1)"));
+            m1.execute(sql("create table tab (id int)"));
+            m1.execute(sql("insert into tab (id) values (1)"));
 
             conn1.setAutoCommit(false);
-            m1.execute(SQL.of("insert into tab (id) values (2)"));
+            m1.execute(sql("insert into tab (id) values (2)"));
 
             final ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
@@ -84,7 +85,7 @@ public class MJDBCRetryTest {
 
                 // Using "update" rather than the more natural "execute" because of a bug in the SQLite library:
                 // https://github.com/xerial/sqlite-jdbc/pull/72
-                m2.withRetryPolicy(retryPolicy).update(SQL.of("insert into tab (id) values (3)"));
+                m2.withRetryPolicy(retryPolicy).update(sql("insert into tab (id) values (3)"));
 
                 // Deliver any background thread exceptions to the main thread
                 future.get();
@@ -93,7 +94,7 @@ public class MJDBCRetryTest {
             }
 
             assertEquals(new HashSet<>(Arrays.asList(1, 2, 3)),
-                         m2.query(SQL.of("select id from tab"), BatchReads.asSet(Reads.useContext(int.class))));
+                         m2.query(sql("select id from tab"), BatchReads.asSet(Reads.useContext(int.class))));
         }
     }
 }

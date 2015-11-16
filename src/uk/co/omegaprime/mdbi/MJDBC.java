@@ -2,11 +2,13 @@ package uk.co.omegaprime.mdbi;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+// TODO: cleanup variance
 public class MJDBC {
     private interface ConnectionObtainer {
         <T> T with(ConnectionUser<T> user) throws SQLException;
@@ -70,6 +72,10 @@ public class MJDBC {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
 
+    public static SQL sql(String x) {
+        return new SQL(Collections.singletonList(x), null);
+    }
+
     public void execute(SQL sql) throws SQLException {
         query(sql, (ctxt, s) -> {
             s.execute();
@@ -79,10 +85,8 @@ public class MJDBC {
 
     public long[] updateBatch(SQL sql) throws SQLException {
         if (prepared) {
-            final BatchPreparedSQLBuilder builder = new BatchPreparedSQLBuilder(context.writers);
-            builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
-                try (final PreparedStatement ps = builder.build(c)) {
+                try (final PreparedStatement ps = BatchPreparedSQLBuilder.build(sql, context.writers, c)) {
                     return retry(c, () -> {
                         try {
                             return ps.executeLargeBatch();
@@ -98,14 +102,12 @@ public class MJDBC {
                 }
             });
         } else {
-            final BatchUnpreparedSQLBuilder builder = new BatchUnpreparedSQLBuilder(context.writers);
-            builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    final Map.Entry<Integer, Iterator<String>> e = builder.build();
+                    final Map.Entry<Integer, Iterator<String>> e = BatchUnpreparedSQLBuilder.build(sql, context.writers);
                     final Iterator<String> it = e.getValue();
 
-                    return retry(c, () -> {
+                    return Transactionally.run(c, () -> retry(c, () -> {
                         final long[] result = new long[e.getKey()];
                         boolean supportsLargeUpdate = true;
                         int i = 0;
@@ -125,7 +127,7 @@ public class MJDBC {
                         }
 
                         return result;
-                    });
+                    }));
                 }
             });
         }
@@ -159,19 +161,15 @@ public class MJDBC {
 
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
         if (prepared) {
-            final BespokePreparedSQLBuilder builder = new BespokePreparedSQLBuilder(context.writers);
-            builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
-                try (final PreparedStatement ps = builder.build(c)) {
+                try (final PreparedStatement ps = BespokePreparedSQLBuilder.build(sql, context.writers, c)) {
                     return retry(c, () -> batchRead.get(context.readers, new PreparedStatementlike(ps)));
                 }
             });
         } else {
-            final BespokeUnpreparedSQLBuilder builder = new BespokeUnpreparedSQLBuilder(context.writers);
-            builder.visitSQL(sql);
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    return retry(c, () -> batchRead.get(context.readers, new UnpreparedStamentlike(s, builder.build())));
+                    return retry(c, () -> batchRead.get(context.readers, new UnpreparedStamentlike(s, BespokeUnpreparedSQLBuilder.build(sql, context.writers))));
                 }
             });
         }

@@ -11,6 +11,7 @@ import java.sql.SQLException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static uk.co.omegaprime.mdbi.MJDBC.sql;
 
 public class TransactionallyTest {
     private Connection conn;
@@ -20,19 +21,19 @@ public class TransactionallyTest {
     public void setUp() throws SQLException {
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
         m = new MJDBC(Context.createDefault(), conn);
-        m.execute(SQL.of("create table tab (value integer)"));
-        m.execute(SQL.of("insert into tab (value) values (0)"));
+        m.execute(sql("create table tab (value integer)"));
+        m.execute(sql("insert into tab (value) values (0)"));
     }
 
     @Test
     public void transactionallySucceed() throws SQLException {
-        Assert.assertEquals(0, Transactionally.run(conn, () -> m.queryFirst(SQL.of("select value from tab"), int.class)).intValue());
+        Assert.assertEquals(0, Transactionally.run(conn, () -> m.queryFirst(sql("select value from tab"), int.class)).intValue());
         assertTrue(conn.getAutoCommit());
     }
 
     @Test
     public void transactionallySucceedNested() throws SQLException {
-        Assert.assertEquals(0, Transactionally.run(conn, () -> Transactionally.run(conn, () -> m.queryFirst(SQL.of("select value from tab"), int.class))).intValue());
+        Assert.assertEquals(0, Transactionally.run(conn, () -> Transactionally.run(conn, () -> m.queryFirst(sql("select value from tab"), int.class))).intValue());
         assertTrue(conn.getAutoCommit());
     }
 
@@ -41,8 +42,8 @@ public class TransactionallyTest {
         boolean thrown = false;
         try {
             Transactionally.run(conn, () -> {
-                m.execute(SQL.of("update tab set value = value + 1"));
-                m.execute(SQL.of("i'm a bogus query lol"));
+                m.execute(sql("update tab set value = value + 1"));
+                m.execute(sql("i'm a bogus query lol"));
                 return null;
             });
         } catch (SQLException e) {
@@ -55,7 +56,7 @@ public class TransactionallyTest {
 
         assertTrue(conn.getAutoCommit());
         assertTrue(thrown);
-        Assert.assertEquals(0, m.queryFirst(SQL.of("select value from tab"), int.class).intValue());
+        Assert.assertEquals(0, m.queryFirst(sql("select value from tab"), int.class).intValue());
     }
 
     @Test
@@ -63,10 +64,10 @@ public class TransactionallyTest {
         boolean thrown = false;
         try {
             Transactionally.run(conn, () -> {
-                m.execute(SQL.of("update tab set value = value + 1"));
+                m.execute(sql("update tab set value = value + 1"));
                 return Transactionally.run(conn, () -> {
-                    m.execute(SQL.of("update tab set value = value + 1"));
-                    m.execute(SQL.of("i'm a bogus query lol"));
+                    m.execute(sql("update tab set value = value + 1"));
+                    m.execute(sql("i'm a bogus query lol"));
                     return null;
                 });
             });
@@ -80,6 +81,6 @@ public class TransactionallyTest {
 
         assertTrue(conn.getAutoCommit());
         assertTrue(thrown);
-        Assert.assertEquals(0, m.queryFirst(SQL.of("select value from tab"), int.class).intValue());
+        Assert.assertEquals(0, m.queryFirst(sql("select value from tab"), int.class).intValue());
     }
 }
