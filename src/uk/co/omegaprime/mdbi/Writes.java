@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Function;
 
 public class Writes {
     public static final Write<Boolean> PRIM_BOOLEAN = new AbstractUnaryWrite<Boolean>() {
@@ -223,6 +224,29 @@ public class Writes {
             void set(PreparedStatement s, int ix, @Nullable T x) throws SQLException {
                 s.setObject(ix, null);
             }
+        };
+    }
+
+    public static <T, U> Write<U> map(Write<T> write, Function<U, T> f) {
+        return ctxt -> {
+            final BoundWrite<T> boundWrite = write.bind(ctxt);
+            return new BoundWrite<U>() {
+                @Override
+                public int arity() {
+                    return boundWrite.arity();
+                }
+
+                @Override
+                public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, @Nullable U x) throws SQLException {
+                    boundWrite.set(s, ix, f.apply(x));
+                }
+
+                @Nonnull
+                @Override
+                public List<String> asSQL(@Nullable U x) {
+                    return boundWrite.asSQL(f.apply(x));
+                }
+            };
         };
     }
 

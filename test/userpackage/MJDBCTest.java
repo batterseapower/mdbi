@@ -6,8 +6,11 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.omegaprime.mdbi.*;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -253,5 +256,32 @@ public class MJDBCTest {
         Assert.assertEquals(1, m.queryList(sql("select 1 where 1 ").in(1, 2), String.class).size());
         Assert.assertEquals(0, m.queryList(sql("select 1 where 1 ").in(2), String.class).size());
         Assert.assertEquals(0, m.queryList(sql("select 1 where 1 ").in(), String.class).size());
+    }
+
+    class Supertype {
+        public final int x;
+
+        public Supertype(int x) {
+            this.x = x;
+        }
+    }
+
+    class Subtype extends Supertype {
+        public Subtype(int x) {
+            super(-x);
+        }
+    }
+
+    @Test
+    public void variance() throws SQLException {
+        // Write a subtype using a mapping designed for a supertype
+        ctxt.registerWrite(Subtype.class, Writes.<Integer, Supertype>map(Writes.PRIM_INT, t -> t.x));
+
+        // Read back a supertype using a mapping designed for a subtype
+        ctxt.registerRead(Supertype.class, Reads.map(Subtype.class, Reads.PRIM_INT, Subtype::new));
+
+        final Supertype result = m.queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
+        assertTrue(result instanceof Subtype);
+        assertEquals(1, result.x);
     }
 }

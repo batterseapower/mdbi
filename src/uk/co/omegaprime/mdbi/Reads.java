@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.function.Function;
 
 public class Reads {
     public static final Read<Boolean> PRIM_BOOLEAN = new AbstractUnaryRead<Boolean>(boolean.class) {
@@ -180,6 +181,21 @@ public class Reads {
 
     public static <T> Read<T> tuple(Class<T> klass, Collection<Read<?>> reads) {
         return new TupleRead<T>(klass, reads);
+    }
+
+    public static <T, U> Read<U> map(Class<U> klass, Read<T> read, Function<T, U> f) {
+        return new Read<U>() {
+            @Override
+            public Class<U> getElementClass() {
+                return klass;
+            }
+
+            @Override
+            public BoundRead<U> bind(Map ctxt) {
+                final BoundRead<T> boundRead = read.bind(ctxt);
+                return (rs, ix) -> f.apply(boundRead.get(rs, ix));
+            }
+        };
     }
 
     private Reads() {}
