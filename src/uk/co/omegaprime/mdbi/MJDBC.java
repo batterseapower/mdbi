@@ -42,12 +42,20 @@ public class MJDBC {
     private final boolean prepared;
     private final Supplier<Retry> retryPolicy;
 
+
+    public MJDBC(Connection connection) {
+        this(Context.DEFAULT, connection);
+    }
+    public MJDBC(DataSource dataSource) {
+        this(Context.DEFAULT, dataSource);
+    }
     public MJDBC(Context context, Connection connection) {
         this(context, ConnectionObtainer.fromConnection(connection));
     }
     public MJDBC(Context context, DataSource dataSource) {
         this(context, ConnectionObtainer.fromDataSource(dataSource));
     }
+
     private MJDBC(Context context, ConnectionObtainer connectionObtainer) {
         this(context, connectionObtainer, true, RetryNothing::new);
     }
@@ -85,7 +93,7 @@ public class MJDBC {
     public long[] updateBatch(SQL sql) throws SQLException {
         if (prepared) {
             return connectionObtainer.with(c -> {
-                try (final PreparedStatement ps = BatchPreparedSQLBuilder.build(sql, context.writers, c)) {
+                try (final PreparedStatement ps = BatchPreparedSQLBuilder.build(sql, context.writeContext(), c)) {
                     return retry(c, () -> {
                         try {
                             return ps.executeLargeBatch();
@@ -103,7 +111,7 @@ public class MJDBC {
         } else {
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    final Map.Entry<Integer, Iterator<String>> e = BatchUnpreparedSQLBuilder.build(sql, context.writers);
+                    final Map.Entry<Integer, Iterator<String>> e = BatchUnpreparedSQLBuilder.build(sql, context.writeContext());
                     final Iterator<String> it = e.getValue();
 
                     return Transactionally.run(c, () -> retry(c, () -> {
@@ -161,14 +169,14 @@ public class MJDBC {
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
         if (prepared) {
             return connectionObtainer.with(c -> {
-                try (final PreparedStatement ps = BespokePreparedSQLBuilder.build(sql, context.writers, c)) {
-                    return retry(c, () -> batchRead.get(context.readers, new PreparedStatementlike(ps)));
+                try (final PreparedStatement ps = BespokePreparedSQLBuilder.build(sql, context.writeContext(), c)) {
+                    return retry(c, () -> batchRead.get(context.readContext(), new PreparedStatementlike(ps)));
                 }
             });
         } else {
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    return retry(c, () -> batchRead.get(context.readers, new UnpreparedStamentlike(s, BespokeUnpreparedSQLBuilder.build(sql, context.writers))));
+                    return retry(c, () -> batchRead.get(context.readContext(), new UnpreparedStamentlike(s, BespokeUnpreparedSQLBuilder.build(sql, context.writeContext()))));
                 }
             });
         }

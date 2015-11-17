@@ -28,4 +28,10 @@ public class RetryDeadlocksTest {
         // Second retry happens here..
         r.consider(DEADLOCK_EXCEPTION);
     }
+
+    @Test(expected = SQLException.class)
+    public void rethrowNonDeadlockyExceptions() throws SQLException {
+        final Retry r = Retries.deadlocks(2, 0, TimeUnit.MILLISECONDS);
+        r.consider(new SQLException("you got a column name wrong"));
+    }
 }

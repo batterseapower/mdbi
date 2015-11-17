@@ -19,7 +19,7 @@ class MapBatchRead<K, V, MapT extends Map<K, V>> implements BatchRead<Map<K, V>>
     }
 
     @Override
-    public MapT get(Reads.Map ctxt, Statementlike ps) throws SQLException {
+    public MapT get(Read.Context ctxt, Statementlike ps) throws SQLException {
         final BoundRead<? extends K> boundReadKey = readKey.bind(ctxt);
         final BoundRead<? extends V> boundReadValue = readValue.bind(ctxt);
         try (final ResultSet rs = ps.executeQuery()) {

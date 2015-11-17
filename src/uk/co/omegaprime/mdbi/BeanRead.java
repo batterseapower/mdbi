@@ -38,7 +38,7 @@ class BeanRead<T> implements Read<T> {
     }
 
     @Override
-    public BoundRead<T> bind(Reads.Map ctxt) {
+    public BoundRead<T> bind(Read.Context ctxt) {
         final List<BoundRead> boundReads = reads.stream().map(r -> r.bind(ctxt)).collect(Collectors.toList());
         return new BoundRead<T>() {
             @Override

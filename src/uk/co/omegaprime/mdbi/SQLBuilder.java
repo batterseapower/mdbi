@@ -83,11 +83,11 @@ class UnpreparedSQLBuilder {
 
 class BatchBuilder {
     private final int size;
-    private final Writes.Map wm;
+    private final Write.Context wm;
 
     private final List<Collection> collections = new ArrayList<>();
 
-    public BatchBuilder(int size, Writes.Map wm) {
+    public BatchBuilder(int size, Write.Context wm) {
         this.size = size;
         this.wm = wm;
     }
@@ -115,7 +115,7 @@ class BatchBuilder {
 class BatchUnpreparedSQLBuilder {
     private BatchUnpreparedSQLBuilder() {}
 
-    public static Map.Entry<Integer, Iterator<String>> build(SQL sql, Writes.Map wm) {
+    public static Map.Entry<Integer, Iterator<String>> build(SQL sql, Write.Context wm) {
         final BatchBuilder batchBuilder = new BatchBuilder(sql.size(), wm);
 
         final List<Map.Entry<BoundWrite<?>, List<String>>> boundWrites = new ArrayList<>();
@@ -174,14 +174,14 @@ class BatchPreparedSQLBuilder {
 
     private BatchPreparedSQLBuilder() {}
 
-    public static PreparedStatement build(SQL sql, Writes.Map wm, Connection connection) throws SQLException {
+    public static PreparedStatement build(SQL sql, Write.Context wm, Connection connection) throws SQLException {
         final int size = sql.size();
         final BatchBuilder batch = new BatchBuilder(size, wm);
 
         final List<Action> actions = new ArrayList<>();
         final PreparedSQLBuilder sqlBuilder = new PreparedSQLBuilder(arg -> {
             final BoundWrite<?> write = batch.visitHole(arg);
-            actions.add(write::set);
+            actions.add((s, ix, x) -> ((BoundWrite<Object>)write).set(s, ix, x));
             return write.arity();
         });
 
@@ -207,7 +207,7 @@ class BespokeUnpreparedSQLBuilder {
     private BespokeUnpreparedSQLBuilder() {}
 
     @SuppressWarnings("unchecked")
-    public static String build(SQL sql, Writes.Map wm) {
+    public static String build(SQL sql, Write.Context wm) {
         final UnpreparedSQLBuilder sqlBuilder = new UnpreparedSQLBuilder(arg -> {
             final SQL.Hole<?> hole = BespokePreparedSQLBuilder.unwrapHole(arg);
             return ((SQL.Hole<Object>)hole).write.bind(wm).asSQL(hole.object);
@@ -226,7 +226,7 @@ class BespokePreparedSQLBuilder {
     private BespokePreparedSQLBuilder() {}
 
     @SuppressWarnings("unchecked")
-    public static PreparedStatement build(SQL sql, Writes.Map wm, Connection connection) throws SQLException {
+    public static PreparedStatement build(SQL sql, Write.Context wm, Connection connection) throws SQLException {
         final PreparedSQLBuilder sqlBuilder;
         final List<Action> actions = new ArrayList<>();
 

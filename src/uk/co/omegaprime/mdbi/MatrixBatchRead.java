@@ -19,7 +19,7 @@ class MatrixBatchRead implements BatchRead<Object[]> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object[] get(@Nonnull Reads.Map ctxt, @Nonnull Statementlike ps) throws SQLException {
+    public Object[] get(@Nonnull Read.Context ctxt, @Nonnull Statementlike ps) throws SQLException {
         return BatchReads.fromResultSetBatchRead((ctxt1, rs) -> {
             final List<BoundRead<?>> boundReads = reads.stream().map(read -> read.bind(ctxt1)).collect(Collectors.toList());
 

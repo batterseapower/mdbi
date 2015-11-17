@@ -25,15 +25,13 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.omegaprime.mdbi.MJDBC.sql;
 
 public class MJDBCTest {
-    private Context ctxt;
     private Connection conn;
     private MJDBC m;
 
     @Before
     public void setUp() throws SQLException {
-        ctxt = Context.createDefault();
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
-        m = new MJDBC(ctxt, conn);
+        m = new MJDBC(conn);
 
         m.execute(sql("create table person (id integer, name string)"));
     }
@@ -73,11 +71,13 @@ public class MJDBCTest {
 
     @Test
     public void tupleWrite() throws SQLException {
-        ctxt.registerWrite(Row.class, TupleWriteBuilder.<Row>create()
-                .add(int.class, r -> r.id)
-                .add(String.class, r -> r.name)
-                .build());
-        m.execute(sql("insert into person (id, name) values (").$(new Row(1, "Max")).sql(")"));
+        final Context ctxt = Context.Builder.createDefault()
+                .registerWrite(Row.class, TupleWriteBuilder.<Row>create()
+                                                           .add(int.class, r -> r.id)
+                                                           .add(String.class, r -> r.name)
+                                                           .build())
+                .build();
+        new MJDBC(ctxt, conn).execute(sql("insert into person (id, name) values (").$(new Row(1, "Max")).sql(")"));
         Assert.assertEquals("Max", m.queryFirst(sql("select name from person"), String.class));
     }
 
@@ -88,10 +88,10 @@ public class MJDBCTest {
 
     @Test
     public void canRegisterClass() throws SQLException {
-        ctxt.registerRead(Row.class, Reads.tuple(Row.class));
+        final Context ctxt = Context.Builder.createDefault().registerRead(Row.class, Reads.tuple(Row.class)).build();
 
-        m.execute(sql("insert into person (id, name) values (").$(1).sql(",").$("Max").sql(")"));
-        final Row row = m.queryFirst(sql("select * from person"), Row.class);
+        new MJDBC(ctxt, conn).execute(sql("insert into person (id, name) values (").$(1).sql(",").$("Max").sql(")"));
+        final Row row = new MJDBC(ctxt, conn).queryFirst(sql("select * from person"), Row.class);
         assertEquals("Max", row.name);
     }
 
@@ -242,12 +242,12 @@ public class MJDBCTest {
 
     @Test
     public void beanWrite() throws SQLException {
-        ctxt.registerWrite(Bean.class, Writes.bean(Bean.class, "Id", "Name"));
+        final Context ctxt = Context.Builder.createDefault().registerWrite(Bean.class, Writes.bean(Bean.class, "Id", "Name")).build();
 
         final Bean bean = new Bean();
         bean.id = 1;
         bean.name = "Max";
-        m.update(sql("insert into person (id, name) values (").$(bean).sql(")"));
+        new MJDBC(ctxt, conn).update(sql("insert into person (id, name) values (").$(bean).sql(")"));
         Assert.assertEquals("Max", m.queryFirst(sql("select name from person"), String.class));
     }
 
@@ -274,13 +274,14 @@ public class MJDBCTest {
 
     @Test
     public void variance() throws SQLException {
-        // Write a subtype using a mapping designed for a supertype
-        ctxt.registerWrite(Subtype.class, Writes.<Integer, Supertype>map(Writes.PRIM_INT, t -> t.x));
+        final Context ctxt = Context.Builder.createDefault()
+            // Write a subtype using a mapping designed for a supertype
+            .registerWrite(Subtype.class, Writes.<Integer, Supertype>map(Writes.PRIM_INT, t -> t.x))
+            // Read back a supertype using a mapping designed for a subtype
+            .registerRead(Supertype.class, Reads.map(Subtype.class, Reads.PRIM_INT, Subtype::new))
+            .build();
 
-        // Read back a supertype using a mapping designed for a subtype
-        ctxt.registerRead(Supertype.class, Reads.map(Subtype.class, Reads.PRIM_INT, Subtype::new));
-
-        final Supertype result = m.queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
+        final Supertype result = new MJDBC(ctxt, conn).queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
         assertTrue(result instanceof Subtype);
         assertEquals(1, result.x);
     }

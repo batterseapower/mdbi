@@ -4,5 +4,5 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public interface ResultSetBatchRead<T> {
-    T get(Reads.Map ctxt, ResultSet rs) throws SQLException;
+    T get(Read.Context ctxt, ResultSet rs) throws SQLException;
 }

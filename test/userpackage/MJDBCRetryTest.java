@@ -52,7 +52,7 @@ public class MJDBCRetryTest {
 
     private void tryDeadlockyTransaction(Supplier<Retry> retryPolicy) throws SQLException, IOException, ExecutionException, InterruptedException {
         final File tempFile = temporaryFolder.newFile();
-        final Context ctxt = Context.createDefault();
+        final Context ctxt = Context.DEFAULT;
 
         try (final Connection conn1 = DriverManager.getConnection("jdbc:sqlite:" + tempFile.toString());
              final Connection conn2 = DriverManager.getConnection("jdbc:sqlite:" + tempFile.toString())) {

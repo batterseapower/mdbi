@@ -5,5 +5,5 @@ import java.sql.SQLException;
 
 @ParametersAreNonnullByDefault
 public interface BatchRead<T> {
-    T get(Reads.Map ctxt, Statementlike ps) throws SQLException;
+    T get(Read.Context ctxt, Statementlike ps) throws SQLException;
 }

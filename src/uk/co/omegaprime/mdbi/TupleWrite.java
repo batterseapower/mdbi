@@ -16,7 +16,7 @@ class TupleWrite<T> implements Write<T> {
     }
 
     @Override
-    public BoundWrite<T> bind(Writes.Map ctxt) {
+    public BoundWrite<T> bind(Write.Context ctxt) {
         final List<BoundWrite<? super T>> boundWrites = new ArrayList<>(args.size());
         for (Write<T> write : args) {
             boundWrites.add(write.bind(ctxt));

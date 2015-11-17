@@ -8,7 +8,7 @@ class ContextWrite<T> implements Write<T> {
     }
 
     @Override
-    public BoundWrite<? super T> bind(Writes.Map ctxt) {
+    public BoundWrite<? super T> bind(Write.Context ctxt) {
         return ctxt.get(klass).bind(ctxt);
     }
 }

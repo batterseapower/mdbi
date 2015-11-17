@@ -257,7 +257,7 @@ public class Writes {
         abstract void set(PreparedStatement s, int ix, @Nullable T x) throws SQLException;
 
         @Override
-        public BoundWrite<T> bind(Map ctxt) {
+        public BoundWrite<T> bind(Context ctxt) {
             return new BoundWrite<T>() {
                 @Override
                 public int arity() {
@@ -278,8 +278,14 @@ public class Writes {
         }
     }
 
-    public static class Map {
+    static class Map implements Write.Context {
         private final HashMap<Class<?>, Write<?>> map = new HashMap<>();
+
+        public Map() {}
+
+        public Map(Map that) {
+            map.putAll(that.map);
+        }
 
         public <T> void put(Class<? extends T> klass, Write<T> write) {
             map.put(klass, write);

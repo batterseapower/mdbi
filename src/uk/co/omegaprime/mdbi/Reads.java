@@ -191,7 +191,7 @@ public class Reads {
             }
 
             @Override
-            public BoundRead<? extends U> bind(Map ctxt) {
+            public BoundRead<? extends U> bind(Context ctxt) {
                 final BoundRead<? extends T> boundRead = read.bind(ctxt);
                 return (rs, ix) -> f.apply(boundRead.get(rs, ix));
             }
@@ -200,8 +200,14 @@ public class Reads {
 
     private Reads() {}
 
-    public static class Map {
+    static class Map implements Read.Context {
         private final HashMap<Class<?>, Read<?>> map = new HashMap<>();
+
+        public Map() {}
+
+        public Map(Map that) {
+            map.putAll(that.map);
+        }
 
         public <T> void put(Class<? super T> klass, Read<T> write) {
             map.put(klass, write);
@@ -231,7 +237,7 @@ public class Reads {
         }
 
         @Override
-        public BoundRead<T> bind(Reads.Map ctxt) {
+        public BoundRead<T> bind(Context ctxt) {
             return new BoundRead<T>() {
                 @Override
                 public T get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {

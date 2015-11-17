@@ -26,7 +26,7 @@ class BeanWrite<T> implements Write<T> {
     }
 
     @Override
-    public BoundWrite<T> bind(Writes.Map ctxt) {
+    public BoundWrite<T> bind(Context ctxt) {
         final List<BoundWrite<?>> boundWrites = writes.stream().map(w -> w.bind(ctxt)).collect(Collectors.toList());
         return new BoundWrite<T>() {
             @Override

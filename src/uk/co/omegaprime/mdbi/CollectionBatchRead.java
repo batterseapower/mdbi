@@ -15,7 +15,7 @@ class CollectionBatchRead<T, CollectionT extends Collection<T>> implements Batch
     }
 
     @Override
-    public CollectionT get(@Nonnull Reads.Map ctxt, @Nonnull Statementlike ps) throws SQLException {
+    public CollectionT get(@Nonnull Read.Context ctxt, @Nonnull Statementlike ps) throws SQLException {
         return BatchReads.fromResultSetBatchRead((ctxt2, rs) -> {
             final BoundRead<? extends T> boundRead = read.bind(ctxt2);
 

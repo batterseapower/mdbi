@@ -20,7 +20,7 @@ public class TransactionallyTest {
     @Before
     public void setUp() throws SQLException {
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
-        m = new MJDBC(Context.createDefault(), conn);
+        m = new MJDBC(conn);
         m.execute(sql("create table tab (value integer)"));
         m.execute(sql("insert into tab (value) values (0)"));
     }
