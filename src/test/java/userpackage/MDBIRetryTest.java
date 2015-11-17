@@ -40,7 +40,7 @@ public class MDBIRetryTest {
                 if (e instanceof SQLException && e.getMessage().contains("is locked")) {
                     try {
                         Thread.sleep(100);
-                    } catch (InterruptedException _) {
+                    } catch (InterruptedException _interrupted) {
                         Thread.currentThread().interrupt();
                     }
                 } else {
