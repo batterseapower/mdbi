@@ -4,11 +4,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-class UnpreparedStamentlike implements Statementlike {
+class UnpreparedStatementlike implements Statementlike {
     private final Statement s;
     private final String sql;
 
-    public UnpreparedStamentlike(Statement s, String sql) {
+    public UnpreparedStatementlike(Statement s, String sql) {
         this.s = s;
         this.sql = sql;
     }

@@ -188,7 +188,7 @@ public class MDBI {
         } else {
             return connectionObtainer.with(c -> {
                 try (final Statement s = c.createStatement()) {
-                    return retry(c, () -> batchRead.get(context.readContext(), new UnpreparedStamentlike(s, BespokeUnpreparedSQLBuilder.build(sql, context.writeContext()))));
+                    return retry(c, () -> batchRead.get(context.readContext(), new UnpreparedStatementlike(s, BespokeUnpreparedSQLBuilder.build(sql, context.writeContext()))));
                 }
             });
         }
