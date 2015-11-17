@@ -11,16 +11,16 @@ import java.sql.SQLException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static uk.co.omegaprime.mdbi.MJDBC.sql;
+import static uk.co.omegaprime.mdbi.MDBI.sql;
 
 public class TransactionallyTest {
     private Connection conn;
-    private MJDBC m;
+    private MDBI m;
 
     @Before
     public void setUp() throws SQLException {
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
-        m = new MJDBC(conn);
+        m = MDBI.of(conn);
         m.execute(sql("create table tab (value integer)"));
         m.execute(sql("insert into tab (value) values (0)"));
     }

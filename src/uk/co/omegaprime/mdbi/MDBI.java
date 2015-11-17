@@ -2,13 +2,12 @@ package uk.co.omegaprime.mdbi;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class MJDBC {
+public class MDBI {
     private interface ConnectionObtainer {
         <T> T with(ConnectionUser<T> user) throws SQLException;
 
@@ -42,26 +41,26 @@ public class MJDBC {
     private final boolean prepared;
     private final Supplier<Retry> retryPolicy;
 
-
-    public MJDBC(Connection connection) {
-        this(Context.DEFAULT, connection);
+    // TODO: support generated keys? Bit awkward because we need to know we need the feature when we prepare the stmt.
+    public static MDBI of(Connection connection) {
+        return MDBI.of(Context.DEFAULT, connection);
     }
-    public MJDBC(DataSource dataSource) {
-        this(Context.DEFAULT, dataSource);
+    public static MDBI of(DataSource dataSource) {
+        return MDBI.of(Context.DEFAULT, dataSource);
     }
-    public MJDBC(Context context, Connection connection) {
-        this(context, ConnectionObtainer.fromConnection(connection));
+    public static MDBI of(Context context, Connection connection) {
+        return new MDBI(context, ConnectionObtainer.fromConnection(connection));
     }
-    public MJDBC(Context context, DataSource dataSource) {
-        this(context, ConnectionObtainer.fromDataSource(dataSource));
-    }
-
-    private MJDBC(Context context, ConnectionObtainer connectionObtainer) {
-        this(context, connectionObtainer, true, RetryNothing::new);
+    public static MDBI of(Context context, DataSource dataSource) {
+        return new MDBI(context, ConnectionObtainer.fromDataSource(dataSource));
     }
 
-    private MJDBC(Context context, ConnectionObtainer connectionObtainer,
-                  boolean prepared, Supplier<Retry> retryPolicy) {
+    private MDBI(Context context, ConnectionObtainer connectionObtainer) {
+        this(context, connectionObtainer, true, Retries::deadlocks);
+    }
+
+    private MDBI(Context context, ConnectionObtainer connectionObtainer,
+                 boolean prepared, Supplier<Retry> retryPolicy) {
         this.context = context;
         this.connectionObtainer = connectionObtainer;
         this.prepared = prepared;
@@ -69,19 +68,19 @@ public class MJDBC {
     }
 
     public boolean isPrepared() { return prepared; }
-    public MJDBC withPrepared(boolean prepared) {
-        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
+    public MDBI withPrepared(boolean prepared) {
+        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
     }
 
     // Note that the retry policy will only be used when executing a query against a connection with no open transaction
     public Supplier<Retry> getRetryPolicy() { return retryPolicy; }
-    public MJDBC withRetryPolicy(Supplier<Retry> retryPolicy) {
-        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
+    public MDBI withRetryPolicy(Supplier<Retry> retryPolicy) {
+        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
     }
 
     public Context getContext() { return context; }
-    public MJDBC withContext(Context context) {
-        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
+    public MDBI withContext(Context context) {
+        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
     }
 
     public static SQL sql(String x) {
@@ -161,6 +160,14 @@ public class MJDBC {
 
     public <T> List<T> queryList(SQL sql, Read<T> read) throws SQLException {
         return query(sql, BatchReads.asList(read));
+    }
+
+    public <K, V> Map<K, V> queryMap(SQL sql, Class<K> keyKlass, Class<V> valueKlass) throws SQLException {
+        return queryMap(sql, new ContextRead<>(keyKlass), new ContextRead<>(valueKlass));
+    }
+
+    public <K, V> Map<K, V> queryMap(SQL sql, Read<K> keyRead, Read<V> valueRead) throws SQLException {
+        return query(sql, BatchReads.asMap(keyRead, valueRead));
     }
 
     public <T> T queryFirst(SQL sql, Class<T> klass) throws SQLException {

@@ -21,9 +21,9 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static uk.co.omegaprime.mdbi.MJDBC.sql;
+import static uk.co.omegaprime.mdbi.MDBI.sql;
 
-public class MJDBCRetryTest {
+public class MDBIRetryTest {
     @Rule
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -56,10 +56,10 @@ public class MJDBCRetryTest {
 
         try (final Connection conn1 = DriverManager.getConnection("jdbc:sqlite:" + tempFile.toString());
              final Connection conn2 = DriverManager.getConnection("jdbc:sqlite:" + tempFile.toString())) {
-            final MJDBC m1 = new MJDBC(ctxt, conn1);
+            final MDBI m1 = MDBI.of(ctxt, conn1);
             // Using unprepared statement here because of a bug in the SQLite library:
             // https://github.com/xerial/sqlite-jdbc/pull/72
-            final MJDBC m2 = new MJDBC(ctxt, conn2).withPrepared(false);
+            final MDBI m2 = MDBI.of(ctxt, conn2).withPrepared(false);
 
             m1.execute(sql("create table tab (id int)"));
             m1.execute(sql("insert into tab (id) values (1)"));

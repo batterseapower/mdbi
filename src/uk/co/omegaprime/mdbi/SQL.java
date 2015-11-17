@@ -43,7 +43,7 @@ public final class SQL {
     @SuppressWarnings("unchecked")
     public SQL $(@Nullable Object x) {
         return x == null ? $(Writes.nullReference(),      null)
-                         : $((Class<Object>)x.getClass(), x);
+                         : $((Class<Object>) x.getClass(), x);
     }
 
     public <T> SQL $(Class<T> klass, @Nullable T x) {
@@ -94,7 +94,7 @@ public final class SQL {
     }
 
     public SQL sql(String x) {
-        return sql(MJDBC.sql(x));
+        return sql(MDBI.sql(x));
     }
 
     @SafeVarargs

@@ -6,11 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.omegaprime.mdbi.*;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,16 +19,16 @@ import java.util.List;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static uk.co.omegaprime.mdbi.MJDBC.sql;
+import static uk.co.omegaprime.mdbi.MDBI.sql;
 
-public class MJDBCTest {
+public class MDBITest {
     private Connection conn;
-    private MJDBC m;
+    private MDBI m;
 
     @Before
     public void setUp() throws SQLException {
         conn = DriverManager.getConnection("jdbc:sqlite::memory:");
-        m = new MJDBC(conn);
+        m = MDBI.of(conn);
 
         m.execute(sql("create table person (id integer, name string)"));
     }
@@ -77,7 +74,7 @@ public class MJDBCTest {
                                                            .add(String.class, r -> r.name)
                                                            .build())
                 .build();
-        new MJDBC(ctxt, conn).execute(sql("insert into person (id, name) values (").$(new Row(1, "Max")).sql(")"));
+        MDBI.of(ctxt, conn).execute(sql("insert into person (id, name) values (").$(new Row(1, "Max")).sql(")"));
         Assert.assertEquals("Max", m.queryFirst(sql("select name from person"), String.class));
     }
 
@@ -90,8 +87,8 @@ public class MJDBCTest {
     public void canRegisterClass() throws SQLException {
         final Context ctxt = Context.Builder.createDefault().registerRead(Row.class, Reads.tuple(Row.class)).build();
 
-        new MJDBC(ctxt, conn).execute(sql("insert into person (id, name) values (").$(1).sql(",").$("Max").sql(")"));
-        final Row row = new MJDBC(ctxt, conn).queryFirst(sql("select * from person"), Row.class);
+        MDBI.of(ctxt, conn).execute(sql("insert into person (id, name) values (").$(1).sql(",").$("Max").sql(")"));
+        final Row row = MDBI.of(ctxt, conn).queryFirst(sql("select * from person"), Row.class);
         assertEquals("Max", row.name);
     }
 
@@ -247,7 +244,7 @@ public class MJDBCTest {
         final Bean bean = new Bean();
         bean.id = 1;
         bean.name = "Max";
-        new MJDBC(ctxt, conn).update(sql("insert into person (id, name) values (").$(bean).sql(")"));
+        MDBI.of(ctxt, conn).update(sql("insert into person (id, name) values (").$(bean).sql(")"));
         Assert.assertEquals("Max", m.queryFirst(sql("select name from person"), String.class));
     }
 
@@ -281,7 +278,7 @@ public class MJDBCTest {
             .registerRead(Supertype.class, Reads.map(Subtype.class, Reads.PRIM_INT, Subtype::new))
             .build();
 
-        final Supertype result = new MJDBC(ctxt, conn).queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
+        final Supertype result = MDBI.of(ctxt, conn).queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
         assertTrue(result instanceof Subtype);
         assertEquals(1, result.x);
     }
