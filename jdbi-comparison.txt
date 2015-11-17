@@ -1,15 +1,15 @@
-- No wrapping of exceptions into weird custom types: just uses SQLException
-- Transaction support that doesn't blow up in interesting ways when you try to nest it
+- Built-in support for empty-collection-safe "IN" clauses
 - Automatic deadlock retry
+- Default mappers that remove JDBC's stupid "null ==> 0" default behaviour. Provision of more sensible "null ==> NaN" default behaviour for double/float.
+- Transaction support that doesn't blow up in interesting ways when you try to nest it
 - Native support for Java 8 time/date types
 - No attempt to parse the SQL, so no need to worry about escaping it
-- Default mappers that remove JDBC's stupid "null ==> 0" default behaviour. Provision of more sensible "null ==> NaN" default behaviour for double/float.
 - Positional rather than named argument binding, eliminating a whole class of errors
 - More powerful resultset mapping than just row-by-row -- can also do whole-resultset transformations (e.g. the matrix mapper)
 - Compositional compound mappers -- JDBI's ReflectionBeanMapper must consume the whole row, but the MDBI Readers.bean() can
   read just a fragment of the row and so be used with e.g. BatchReads.asMap to retrieve just the key/value part of the row
-- Built-in support for empty-collection-safe "IN" clauses
 - User-transparent ability to toggle between prepared and unprepared modes (unprepared statements are mandatory if you want to
   e.g. create a temp table using the SQL Server JDBC driver)
-- No dependencies
 - Symmetric treatment of statement parameters and results: you can register mappers for input to statements as well as their outputs
+- No dependencies
+- No wrapping of exceptions into weird custom types: just uses SQLException
