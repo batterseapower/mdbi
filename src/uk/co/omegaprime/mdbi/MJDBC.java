@@ -79,6 +79,11 @@ public class MJDBC {
         return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
     }
 
+    public Context getContext() { return context; }
+    public MJDBC withContext(Context context) {
+        return new MJDBC(context, connectionObtainer, prepared, retryPolicy);
+    }
+
     public static SQL sql(String x) {
         return new SQL(SnocList.singleton(x), null);
     }
