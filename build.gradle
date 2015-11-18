@@ -1,7 +1,7 @@
 apply plugin: 'java'
 apply plugin: 'maven-publish'
 
-group = 'uk.co.omega-prime'
+group = 'uk.co.omegaprime'
 version = '1.0.0'
 sourceCompatibility = 1.8
 
