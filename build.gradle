@@ -1,11 +1,21 @@
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+    }
+}
 
-group = 'uk.co.omegaprime'
-version = '1.0.0'
+apply plugin: 'java'
+apply plugin: 'com.bmuschko.nexus'
+
+group = 'uk.co.omega-prime'
 sourceCompatibility = 1.8
 
 jar {
+    baseName = 'mdbi'
+    version = '1.0'
     manifest {
         attributes 'Implementation-Title': 'mdbi',
                    'Implementation-Version': version
@@ -22,10 +32,32 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.+'
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
+modifyPom {
+    project {
+        name 'mdbi'
+        description 'Max\'s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI'
+        url 'https://github.com/batterseapower/mdbi'
+
+        scm {
+            url 'https://github.com/batterseapower/mdbi'
+            connection 'scm:https://batterseapower@github.com/batterseapower/mdbi.git'
+            developerConnection 'scm:git://github.com/batterseapower/mdbi.git'
+        }
+
+        licenses {
+            license {
+                name 'The Apache Software License, Version 2.0'
+                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                distribution 'repo'
+            }
+        }
+
+        developers {
+            developer {
+                id 'batterseapower'
+                name 'Max Bolingbroke'
+                email 'batterseapower@hotmail.com'
+            }
         }
     }
 }
