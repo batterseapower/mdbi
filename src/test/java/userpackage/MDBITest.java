@@ -252,7 +252,10 @@ public class MDBITest {
     public void in() throws SQLException {
         Assert.assertEquals(1, m.queryList(sql("select 1 where 1 ").in(1, 2), String.class).size());
         Assert.assertEquals(0, m.queryList(sql("select 1 where 1 ").in(2), String.class).size());
+        Assert.assertEquals(1, m.queryList(sql("select 1 where 1 not ").in(2), String.class).size());
         Assert.assertEquals(0, m.queryList(sql("select 1 where 1 ").in(), String.class).size());
+        Assert.assertEquals(1, m.queryList(sql("select 1 where 1 not ").in(), String.class).size());
+        Assert.assertEquals(1, m.queryList(sql("select 1 where 1").in(1).sql("and 1=1"), String.class).size());
     }
 
     class Supertype {

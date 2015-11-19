@@ -115,14 +115,25 @@ public final class SQL {
     }
 
     private <T> SQL inCore(Iterable<T> xs, BiFunction<SQL, T, SQL> f) {
-        // Exploit the fact that 'null not in (null)' to avoid generating nullary IN clauses:
-        // systems like SQL Server can't parse them
-        SQL result = sql("in (null");
-        for (T x : xs) {
-            result = f.apply(result.sql(","), x);
+        final Iterator<T> it = xs.iterator();
+        if (!it.hasNext()) {
+            // I used to get clever in this case and generate "in (null)" on the basis that nothing is equal
+            // to null... unfortunately it seems that e.g. on SQLite, all of these queries return 0 results:
+            //   select 1 where 1 in (null)
+            //   select 1 where 1 not in (null)
+            //   select 1 where not (1 in (null))
+            //   select 1 where not (1 not in (null))
+            // See also http://stackoverflow.com/questions/129077/not-in-clause-and-null-values
+            //
+            // So now I rely on comparing to this random GUID instead!
+            return sql(" in ('e0afa0da0e3444d5ae3b34202b759e0c') ");
+        } else {
+            SQL result = f.apply(sql(" in ("), it.next());
+            while (it.hasNext()) {
+                result = f.apply(result.sql(","), it.next());
+            }
+            return result.sql(") ");
         }
-
-        return result.sql(")");
     }
 
     @Override
