@@ -17,7 +17,7 @@ public class Reads {
         @Override
         public Boolean get(ResultSet rs, int ix) throws SQLException {
             boolean result = rs.getBoolean(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             return result;
         }
     };
@@ -33,7 +33,7 @@ public class Reads {
         @Override
         protected Byte get(ResultSet rs, int ix) throws SQLException {
             byte result = rs.getByte(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             return result;
         }
     };
@@ -49,7 +49,7 @@ public class Reads {
         @Override
         protected Character get(ResultSet rs, int ix) throws SQLException {
             String result = rs.getString(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             if (result.length() != 1) throw new IllegalArgumentException("Found string " + result + " but was expecting single char");
             return result.charAt(0);
         }
@@ -67,7 +67,7 @@ public class Reads {
         @Override
         protected Short get(ResultSet rs, int ix) throws SQLException {
             short result = rs.getShort(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             return result;
         }
     };
@@ -83,7 +83,7 @@ public class Reads {
         @Override
         public Integer get(ResultSet rs, int ix) throws SQLException {
             final int result = rs.getInt(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             return result;
         }
     };
@@ -99,7 +99,7 @@ public class Reads {
         @Override
         protected Long get(ResultSet rs, int ix) throws SQLException {
             long result = rs.getLong(ix);
-            if (rs.wasNull()) throw new IllegalArgumentException("Found null in result");
+            if (rs.wasNull()) throw new NullPointerException("Found null in result");
             return result;
         }
     };
