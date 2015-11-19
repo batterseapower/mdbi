@@ -10,7 +10,7 @@ buildscript {
 apply plugin: 'java'
 apply plugin: 'com.bmuschko.nexus'
 
-group = 'uk.co.omegaprime'
+group = 'uk.co.omega-prime'
 sourceCompatibility = 1.8
 
 jar {
