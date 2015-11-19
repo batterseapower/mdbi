@@ -114,12 +114,12 @@ public class Sample {
         final Person personToSave = new Person("Max", 29);
         MDBI.of(ctxt2, conn).execute(sql("insert into people (name, age) values (").$(personToSave).sql(")"));
 
-        // There's lots more features besides:
+        // And there are lots more features besides:
         //  * Deadlocks are automatically retried. (The retry policy is fully customizable.)
         //  * Java 8 date and time types are fully supported
         //  * Support for both PreparedStatement and Statement. This can be useful when working with a database
         //    that e.g. scopes the lifetime of temp tables to a prepared statement.
-        // And all of this comes with no runtime dependencies and a very lightweight jar!
+        // All of this comes with no runtime dependencies at all -- you only need the JDK.
     }
 
     public static void println(Object x) {
