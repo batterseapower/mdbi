@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>MDBI by batterseapower</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">MDBI</h1>
+      <h2 class="project-tagline">Max&#39;s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI</h2>
+      <a href="https://github.com/batterseapower/mdbi" class="btn">View on GitHub</a>
+      <a href="https://github.com/batterseapower/mdbi/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/batterseapower/mdbi/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h3>
+<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+
+<p><a href="https://en.wikipedia.org/wiki/Java_Database_Connectivity">Java Database Connectivity (JDBC)</a> is almost inescapable if you want to talk to a SQL database from Java. However, JDBC is an API that is absolutely no fun to use! MDBI is a wrapper around JDBC that takes the pain away, loosely inspired by <a href="http://jdbi.org/">JDBI</a> and Harriet Cooper's Phi library for Scala.</p>
+
+<h3>
+<a id="the-basics" class="anchor" href="#the-basics" aria-hidden="true"><span class="octicon octicon-link"></span></a>The basics</h3>
+
+<p>Getting started with MDBI is easy: all you need is a javax.sql.DataSource or Connection:</p>
+
+<pre><code>final Connection conn = DriverManager.getConnection("jdbc:sqlite::memory:");
+MDBI.of(conn).execute(sql("create table people (name text, age int)"));
+</code></pre>
+
+<p>As well as executing raw SQL, it is of course possible to interpolate Java objects into the query:</p>
+
+<pre><code>final String name = "Michael O'Hare";
+MDBI.of(conn).execute(sql("insert into people (name, age) values (").$(name).sql(", 30)"));
+</code></pre>
+
+<p>To get back Java objects from the database, simply use a "query" method rather than "execute":</p>
+
+<pre><code>final int age = MDBI.of(conn).queryFirst(sql("select age from people"), int.class);
+println(age); // 30
+</code></pre>
+
+<h3>
+<a id="null-safety" class="anchor" href="#null-safety" aria-hidden="true"><span class="octicon octicon-link"></span></a>NULL safety</h3>
+
+<p>Most people who work with JDBC have been burned at some point by the fact that it silently
+turns NULLs in the database into zeroes, which is almost never what you want. MDBI removes
+this misfeature, so the following query actually throws a NullPointerException:</p>
+
+<pre><code>MDBI.of(conn).queryFirst(sql("select null"), int.class);
+</code></pre>
+
+<p>Of course, you can still retrieve nulls if you explicitly ask for them:</p>
+
+<pre><code>final Integer nully = MDBI.of(conn).queryFirst(sql("select null"), Integer.class);
+println(nully); // null
+</code></pre>
+
+<p>Note that database NULLs <em>are</em> supported when retrieving primitive doubles and floats, where
+they can be cleanly mapped to NaNs</p>
+
+<pre><code>final double nullyDouble = MDBI.of(conn).queryFirst(sql("select null"), double.class);
+println(nullyDouble); // NaN
+</code></pre>
+
+<h3>
+<a id="batch-update" class="anchor" href="#batch-update" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch update</h3>
+
+<p>Batch statements are of course fully supported:</p>
+
+<pre><code>final List&lt;String&gt; names = Arrays.asList("Fry", "Leela");
+final List&lt;Integer&gt; ages = Arrays.asList(1025, 25);
+MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(names).sql(",").$s(ages).sql(")"));
+</code></pre>
+
+<p>You can even mix batched and non-batched bits of the query:</p>
+
+<pre><code>final List&lt;String&gt; moreNames = Arrays.asList("Foo", "Bar");
+final int anotherAge = 13;
+MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(moreNames).sql(",").$(anotherAge).sql(")"));
+</code></pre>
+
+<h3>
+<a id="conveniences" class="anchor" href="#conveniences" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conveniences</h3>
+
+<p>MDBI has built-in support for IN clauses:</p>
+
+<pre><code>final List&lt;Integer&gt; foundAges = MDBI.of(conn).queryList(sql("select age from people where name ").in("Fry", "Foo"), int.class);
+println(foundAges); // [1025, 13]
+</code></pre>
+
+<p>These IN clauses work properly with empty argument lists, even if the database does not normally support
+nullary IN clauses (most databases don't -- SQLite is the only one I know of that supports them)</p>
+
+<pre><code>final int count = MDBI.of(conn).queryFirst(sql("select count(*) from people where name not ").in(), int.class);
+println(count); // 5
+</code></pre>
+
+<p>There is transaction support that's really easy to use (no messing around with the confusing setAutocommit interface)</p>
+
+<pre><code>try {
+    Transactionally.run(conn, () -&gt; {
+        MDBI.of(conn).execute(sql("insert into people (name, age) values ('foo', 1)"));
+        throw new IllegalArgumentException("Changed my mind!");
+    });
+} catch (IllegalArgumentException _) {}
+</code></pre>
+
+<h3>
+<a id="structured-types" class="anchor" href="#structured-types" aria-hidden="true"><span class="octicon octicon-link"></span></a>Structured types</h3>
+
+<p>TODO...</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/batterseapower/mdbi">MDBI</a> is maintained by <a href="https://github.com/batterseapower">batterseapower</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
