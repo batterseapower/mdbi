@@ -22,12 +22,14 @@
       <h3>
 <a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
 
-<p><a href="https://en.wikipedia.org/wiki/Java_Database_Connectivity">Java Database Connectivity (JDBC)</a> is almost inescapable if you want to talk to a SQL database from Java. However, JDBC is an API that is absolutely no fun to use! MDBI is a wrapper around JDBC that takes the pain away, loosely inspired by <a href="http://jdbi.org/">JDBI</a> and Harriet Cooper's Phi library for Scala.</p>
+<p><a href="https://en.wikipedia.org/wiki/Java_Database_Connectivity">Java Database Connectivity (JDBC)</a> is inescapable if you want to talk to a SQL database from Java. Unfortanately, JDBC is an API that is absolutely no fun to use!</p>
+
+<p>MDBI is a wrapper around JDBC that takes the pain away, loosely inspired by <a href="http://jdbi.org/">JDBI</a> and Harriet Cooper's Phi library for Scala.</p>
 
 <h3>
 <a id="the-basics" class="anchor" href="#the-basics" aria-hidden="true"><span class="octicon octicon-link"></span></a>The basics</h3>
 
-<p>Getting started with MDBI is easy: all you need is a javax.sql.DataSource or Connection:</p>
+<p>Getting started with MDBI is easy: all you need is a <code>javax.sql.DataSource</code> or <code>Connection</code>:</p>
 
 <pre><code>final Connection conn = DriverManager.getConnection("jdbc:sqlite::memory:");
 MDBI.of(conn).execute(sql("create table people (name text, age int)"));
@@ -49,7 +51,7 @@ println(age); // 30
 <a id="null-safety" class="anchor" href="#null-safety" aria-hidden="true"><span class="octicon octicon-link"></span></a>NULL safety</h3>
 
 <p>Most people who work with JDBC have been burned at some point by the fact that it silently
-turns NULLs in the database into zeroes, which is almost never what you want. MDBI removes
+turns <code>NULL</code>s in the database into zeroes, which is almost never what you want. MDBI removes
 this misfeature, so the following query actually throws a NullPointerException:</p>
 
 <pre><code>MDBI.of(conn).queryFirst(sql("select null"), int.class);
@@ -62,7 +64,7 @@ println(nully); // null
 </code></pre>
 
 <p>Note that database NULLs <em>are</em> supported when retrieving primitive doubles and floats, where
-they can be cleanly mapped to NaNs</p>
+they can be cleanly mapped to NaNs:</p>
 
 <pre><code>final double nullyDouble = MDBI.of(conn).queryFirst(sql("select null"), double.class);
 println(nullyDouble); // NaN
@@ -75,33 +77,37 @@ println(nullyDouble); // NaN
 
 <pre><code>final List&lt;String&gt; names = Arrays.asList("Fry", "Leela");
 final List&lt;Integer&gt; ages = Arrays.asList(1025, 25);
-MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(names).sql(",").$s(ages).sql(")"));
+MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (")
+                                        .$s(names).sql(",").$s(ages).sql(")"));
 </code></pre>
 
 <p>You can even mix batched and non-batched bits of the query:</p>
 
 <pre><code>final List&lt;String&gt; moreNames = Arrays.asList("Foo", "Bar");
 final int anotherAge = 13;
-MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(moreNames).sql(",").$(anotherAge).sql(")"));
+MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (")
+                                        .$s(moreNames).sql(",").$(anotherAge).sql(")"));
 </code></pre>
 
 <h3>
 <a id="conveniences" class="anchor" href="#conveniences" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conveniences</h3>
 
-<p>MDBI has built-in support for IN clauses:</p>
+<p>MDBI has built-in support for <code>IN</code> clauses:</p>
 
-<pre><code>final List&lt;Integer&gt; foundAges = MDBI.of(conn).queryList(sql("select age from people where name ").in("Fry", "Foo"), int.class);
+<pre><code>final List&lt;Integer&gt; foundAges = MDBI.of(conn).queryList(
+                        sql("select age from people where name ").in("Fry", "Foo"), int.class);
 println(foundAges); // [1025, 13]
 </code></pre>
 
-<p>These IN clauses work properly with empty argument lists, even if the database does not normally support
-nullary IN clauses (most databases don't -- SQLite is the only one I know of that supports them)</p>
+<p>These <code>IN</code> clauses work properly with empty argument lists, even if the database does not normally support
+nullary <code>IN</code> clauses (and most databases don't):</p>
 
-<pre><code>final int count = MDBI.of(conn).queryFirst(sql("select count(*) from people where name not ").in(), int.class);
+<pre><code>final int count = MDBI.of(conn).queryFirst(
+                        sql("select count(*) from people where name not ").in(), int.class);
 println(count); // 5
 </code></pre>
 
-<p>There is transaction support that's really easy to use (no messing around with the confusing setAutocommit interface)</p>
+<p>There is also transaction support that's really easy to use (no messing around with the confusing <code>setAutoCommit</code> interface):</p>
 
 <pre><code>try {
     Transactionally.run(conn, () -&gt; {
@@ -109,12 +115,98 @@ println(count); // 5
         throw new IllegalArgumentException("Changed my mind!");
     });
 } catch (IllegalArgumentException _) {}
+
+final int postTransactionCount = MDBI.of(conn).queryFirst(
+                                    sql("select count(*) from people"), int.class);
+println(postTransactionCount); // 5
 </code></pre>
 
 <h3>
-<a id="structured-types" class="anchor" href="#structured-types" aria-hidden="true"><span class="octicon octicon-link"></span></a>Structured types</h3>
+<a id="structured-result-types" class="anchor" href="#structured-result-types" aria-hidden="true"><span class="octicon octicon-link"></span></a>Structured result types</h3>
 
-<p>TODO...</p>
+<p>So far we've shown how to retrieve single rows and lists from the datbase. But MDBI has native support for
+other useful types of result. For example:</p>
+
+<pre><code>final Map&lt;String, Integer&gt; ageMap = MDBI.of(conn).queryMap(
+                                    sql("select name, age from people"), String.class, int.class);
+println(ageMap.get("Fry")); // 1025
+</code></pre>
+
+<p>One option that is particularly handy is the "matrix":</p>
+
+<pre><code>final Object[] matrix = MDBI.of(conn).query(sql("select name, age from people order by name"),
+                                            BatchReads.matrix(String.class, int.class));
+final String[] nameColumn = (String[])matrix[0];
+final int[] ageColumn = (int[])matrix[1];
+println(nameColumn[0] + ": " + ageColumn[1]); // Bar: 13
+</code></pre>
+
+<h3>
+<a id="custom-type-mapping" class="anchor" href="#custom-type-mapping" aria-hidden="true"><span class="octicon octicon-link"></span></a>Custom type mapping</h3>
+
+<p>MDBI has great support for Java primitive types, but it can also be extended with support for your own types. Let's say
+you have a bean, <code>PersonBean</code>, with <code>Name</code> and <code>Age</code> properties. This works:</p>
+
+<pre><code>final Context ctxt0 = Context.Builder.createDefault()
+        .registerRead(PersonBean.class, Reads.bean(PersonBean.class, "Name", "Age"))
+        .build();
+final PersonBean bean = MDBI.of(ctxt0, conn).queryFirst(
+                            sql("select name, age from people order by name"), PersonBean.class);
+println(bean.getName()); // Bar
+</code></pre>
+
+<p>If you don't like beans, that's no problem. There are also strongly-typed interfaces suitable for immutable data types. For
+example, if we have defined a <code>Person</code> type as follows:</p>
+
+<pre><code>public class Person {
+    public final String name;
+    public final int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+}
+</code></pre>
+
+<p>Then we can read this back from the database as follows:</p>
+
+<pre><code>final Context ctxt1 = Context.Builder.createDefault()
+        .registerRead(Person.class, Reads.tuple(Person.class))
+        .build();
+final Person person = MDBI.of(ctxt1, conn).queryFirst(
+                        sql("select name, age from people order by name"), Person.class);
+println(person.name); // Bar
+</code></pre>
+
+<p>We've shown how you can read your custom types back from the database, but custom types are also usable when you are
+constructing SQL queries. You just need to use <code>Context.registerWrite</code> instead of <code>Context.registerRead</code>:</p>
+
+<pre><code>final Context ctxt2 = Context.Builder.createDefault()
+        .registerWrite(Person.class, TupleWriteBuilder.&lt;Person&gt;create()
+                                        .add(String.class, p -&gt; p.name)
+                                        .add(int.class,    p -&gt; p.age)
+                                        .build())
+        .build();
+final Person personToSave = new Person("Max", 29);
+MDBI.of(ctxt2, conn).execute(sql("insert into people (name, age) values (").$(personToSave).sql(")"));
+</code></pre>
+
+<h3>
+<a id="conclusion" class="anchor" href="#conclusion" aria-hidden="true"><span class="octicon octicon-link"></span></a>Conclusion</h3>
+
+<p>There are lots more features besides:</p>
+
+<ul>
+<li>Deadlocks are automatically retried. (The retry policy is fully customizable.)</li>
+<li>Java 8 date and time types are fully supported</li>
+<li>Support for both PreparedStatement and Statement. This can be useful when working with a database
+that e.g. scopes the lifetime of temp tables to a prepared statement.</li>
+</ul>
+
+<p>All of this comes with no runtime dependencies at all -- you only need the JDK.</p>
+
+<p>To get started, grab a jar from <a href="TODO">Maven Central</a> TODO and check out the <a href="TODO">JavaDocs</a> TODO.</p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/batterseapower/mdbi">MDBI</a> is maintained by <a href="https://github.com/batterseapower">batterseapower</a>.</span>
