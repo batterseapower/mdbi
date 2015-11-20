@@ -95,7 +95,7 @@ MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (")
 <p>MDBI has built-in support for <code>IN</code> clauses:</p>
 
 <pre><code>final List&lt;Integer&gt; foundAges = MDBI.of(conn).queryList(
-                        sql("select age from people where name ").in("Fry", "Foo"), int.class);
+                     sql("select age from people where name ").in("Fry", "Foo"), int.class);
 println(foundAges); // [1025, 13]
 </code></pre>
 
@@ -128,7 +128,7 @@ println(postTransactionCount); // 5
 other useful types of result. For example:</p>
 
 <pre><code>final Map&lt;String, Integer&gt; ageMap = MDBI.of(conn).queryMap(
-                                    sql("select name, age from people"), String.class, int.class);
+                            sql("select name, age from people"), String.class, int.class);
 println(ageMap.get("Fry")); // 1025
 </code></pre>
 
@@ -151,7 +151,7 @@ you have a bean, <code>PersonBean</code>, with <code>Name</code> and <code>Age</
         .registerRead(PersonBean.class, Reads.bean(PersonBean.class, "Name", "Age"))
         .build();
 final PersonBean bean = MDBI.of(ctxt0, conn).queryFirst(
-                            sql("select name, age from people order by name"), PersonBean.class);
+                    sql("select name, age from people order by name"), PersonBean.class);
 println(bean.getName()); // Bar
 </code></pre>
 
@@ -189,7 +189,8 @@ constructing SQL queries. You just need to use <code>Context.registerWrite</code
                                         .build())
         .build();
 final Person personToSave = new Person("Max", 29);
-MDBI.of(ctxt2, conn).execute(sql("insert into people (name, age) values (").$(personToSave).sql(")"));
+MDBI.of(ctxt2, conn).execute(
+    sql("insert into people (name, age) values (").$(personToSave).sql(")"));
 </code></pre>
 
 <h3>
@@ -206,7 +207,7 @@ that e.g. scopes the lifetime of temp tables to a prepared statement.</li>
 
 <p>All of this comes with no runtime dependencies at all -- you only need the JDK.</p>
 
-<p>To get started, grab a jar from <a href="TODO">Maven Central</a> TODO and check out the <a href="TODO">JavaDocs</a> TODO.</p>
+<p>To get started, grab a jar from <a href="http://mvnrepository.com/artifact/uk.co.omega-prime/mdbi/">Maven Central</a> and check out the <a href="TODO">JavaDocs</a> TODO.</p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/batterseapower/mdbi">MDBI</a> is maintained by <a href="https://github.com/batterseapower">batterseapower</a>.</span>
