@@ -5,6 +5,7 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.*;
 import java.util.function.BiFunction;
 
+/** An immutable type representing a SQL statement with zero or more holes that are filled by Java objects */
 @ParametersAreNonnullByDefault
 public final class SQL {
     static class Hole<T> {
@@ -40,20 +41,27 @@ public final class SQL {
         return this.size == null ? 0 : this.size;
     }
 
+    /** Interpolate a Java object into the SQL query using a {@link Write} instance that is appropriate for its runtime type */
     @SuppressWarnings("unchecked")
     public SQL $(@Nullable Object x) {
         return x == null ? $(Writes.nullReference(),      null)
                          : $((Class<Object>) x.getClass(), x);
     }
 
+    /** Interpolate a Java object into the SQL query using a {@link Write} instance suitable for the supplied class */
     public <T> SQL $(Class<T> klass, @Nullable T x) {
         return new SQL(args.snoc(new Hole<>(x, new ContextWrite<>(klass))), size);
     }
 
+    /** Interpolate a Java object into the SQL query using the supplied {@link Write} instance */
     public <T> SQL $(Write<T> write, @Nullable T x) {
         return new SQL(args.snoc(new Hole<>(x, write)), size);
     }
 
+    /**
+     * Interpolate a series of Java objects into a batch SQL query using a {@link Write} instance inferred from the
+     * runtime type of the first non-null item in the collection.
+     */
     @SuppressWarnings("unchecked")
     public <T> SQL $s(Collection<T> arg) {
         final Class<?> klass;
@@ -77,10 +85,12 @@ public final class SQL {
         }
     }
 
+    /** Interpolate a series of Java objects into a batch SQL query using a {@link Write} instance suitable for the supplied class. */
     public <T> SQL $s(Class<T> klass, Collection<T> x) {
         return $s(Writes.useContext(klass), x);
     }
 
+    /** Interpolate a series of Java objects into a batch SQL query using the supplied {@link Write} instance */
     public <T> SQL $s(Write<T> write, Collection<T> x) {
         if (size != null && size != x.size()) {
             throw new IllegalArgumentException("All collections supplied to a batch SQL statement must be of the same size, but you had both sizes " + size + " and " + x.size());
@@ -89,27 +99,38 @@ public final class SQL {
         return new SQL(args.snoc(new BatchHole<>(x, write)), x.size());
     }
 
+    /** Append a SQL literal */
     public SQL sql(SQL x) {
         return new SQL(args.snocs(x.args), size);
     }
 
+    /** Append a SQL literal */
     public SQL sql(String x) {
         return sql(MDBI.sql(x));
     }
 
+    /** Append a SQL literal */
     @SafeVarargs
     public final <T> SQL in(T... xs) {
         return in(Arrays.<T>asList(xs));
     }
 
+    /**
+     * Append an &quot;IN&quot; clause based on the supplied collection
+     *
+     * The input objects are turned into SQL using a {@link Write} based on their runtime type, similar to how
+     * {@link #$(Object)} works.
+     */
     public <T> SQL in(Iterable<T> xs) {
         return inCore(xs, SQL::$);
     }
 
+    /** Append an &quot;IN&quot; clause based on the supplied collection, turning objects into SQL using the {@link Write} instance for the supplied class. */
     public final <T> SQL in(Class<T> klass, Iterable<T> xs) {
         return in(Writes.useContext(klass), xs);
     }
 
+    /** Append an &quot;IN&quot; clause based on the supplied collection, turning objects into SQL using the supplied {@link Write} instance. */
     public final <T> SQL in(Write<T> write, Iterable<T> xs) {
         return inCore(xs, (sql, x) -> sql.$(write, x));
     }

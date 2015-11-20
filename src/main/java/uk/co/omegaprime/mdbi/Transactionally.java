@@ -5,6 +5,7 @@ import com.sun.media.jfxmedia.locator.ConnectionHolder;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+/** Utilities for working with transactions */
 public class Transactionally {
     private Transactionally() {}
 
@@ -26,6 +27,15 @@ public class Transactionally {
         }
     }
 
+    /**
+     * Runs the action (which presumably performs some SQL queries) in the context of a transaction.
+     * <p>
+     * If the action throws an exception, the transaction will be rolled back. If the action completes
+     * without throwing, the transaction will be committed.
+     * <p>
+     * If a transaction is already in progress then the action will just be executed with no special
+     * handling, essentially joining the transaction that is already in progress.
+     */
     public static <T> T run(Connection c, SQLAction<T> SQLAction) throws SQLException {
         if (!c.getAutoCommit()) {
             // Already in transaction, join that one

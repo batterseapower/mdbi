@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 
+/** Construct useful instances of the {@link Write} interface. */
 public class Writes {
     public static final Write<Boolean> PRIM_BOOLEAN = new AbstractUnaryWrite<Boolean>() {
         @Override public String asSQL(@Nullable Boolean x) { assert x != null; return Boolean.toString(x); }
@@ -204,18 +205,22 @@ public class Writes {
         }
     };
 
+    /** A {@code Write} instance that simply defers to the {@link Context} to decide how to turn instances of the given class into SQL. */
     public static <T> Write<T> useContext(Class<T> klass) {
         return new ContextWrite<>(klass);
     }
 
+    /** Turns a bean into SQL by serializing the named fields in order using {@link Write} registered in the context for the respective property type.  */
     public static <T> Write<T> bean(Class<T> klass, String... fields) {
         return new BeanWrite<>(klass, fields);
     }
 
+    /** Turns a bean into SQL by serialized the named fields in order using the supplied {@link Write} instances. */
     public static <T> Write<T> bean(Class<T> klass, Collection<String> fields, Collection<Write<?>> reads) {
         return new BeanWrite<>(klass, fields, reads);
     }
 
+    /** Always turns the argument into a SQL null. Useful internally as a last-ditch fallback when we've been asked to serialize a null. */
     public static <T> Write<T> nullReference() {
         return new AbstractUnaryWrite<T>() {
             @Override String asSQL(@Nullable T x) { return "null"; }
@@ -227,6 +232,7 @@ public class Writes {
         };
     }
 
+    /** Mapping treating {@code Write} as a co-functor. */
     public static <T, U> Write<U> map(Write<T> write, Function<U, T> f) {
         return ctxt -> {
             final BoundWrite<? super T> boundWrite = write.bind(ctxt);

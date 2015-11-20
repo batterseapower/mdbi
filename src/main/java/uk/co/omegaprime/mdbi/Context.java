@@ -5,17 +5,26 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
 
+/**
+ * An immutable object describing how to map Java types to SQL ones, and vice versa.
+ * <p>
+ * In order to construct one of these, you probably want to either just use {@link #DEFAULT}
+ * or (if you want some customization), to use {@link Context.Builder}.
+ */
 public class Context {
     public static final Context DEFAULT = Builder.createDefault().build();
 
+    /** A mutable builder allowing you to construct an immutable {@link Context} object. */
     public static class Builder {
         private final Reads.Map readers;
         private final Writes.Map writers;
 
+        /** Returns a builder with no type mappings whatsoever &mdash; not even the built-in ones. */
         public static Builder createEmpty() {
             return new Builder(new Reads.Map(), new Writes.Map());
         }
 
+        /** Returns a builder with the default set of type mappings, covering basic JDK types. */
         public static Builder createDefault() {
             final Builder context = createEmpty();
             context.register(boolean.class,       Writes.PRIM_BOOLEAN,    Reads.PRIM_BOOLEAN);
@@ -47,17 +56,20 @@ public class Context {
             this.writers = writers;
         }
 
+        /** Tells the builder how you want to map a Java type to SQL, both going in to SQL ({@code Write}) and out of SQL ({@code Read}) */
         public <T> Builder register(Class<T> klass, Write<T> write, Read<T> read) {
             readers.put(klass, read);
             writers.put(klass, write);
             return this;
         }
 
+        /** Tells the builder how you want to construct a Java value from a SQL value */
         public <T> Builder registerRead(Class<? super T> klass, Read<T> read) {
             readers.put(klass, read);
             return this;
         }
 
+        /** Tells the builder how you want to construct a SQL value from a Java value */
         public <T> Builder registerWrite(Class<? extends T> klass, Write<T> write) {
             writers.put(klass, write);
             return this;

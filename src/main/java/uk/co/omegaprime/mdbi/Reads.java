@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.function.Function;
 
+/** Useful methods for constructing instances of the {@link Read} interface. */
 public class Reads {
     public static final Read<Boolean> PRIM_BOOLEAN = new AbstractUnaryRead<Boolean>(boolean.class) {
         @Override
@@ -171,18 +172,22 @@ public class Reads {
         @Override protected byte[] get(ResultSet rs, int ix) throws SQLException { return rs.getBytes(ix); }
     };
 
+    /** A {@code Read} instance that simply defers to the {@link Context} to decide how to construct an instance of the given class. */
     public static <T> Read<T> useContext(Class<T> klass) {
         return new ContextRead<>(klass);
     }
 
+    /** Constructs a type that has only one public constructor. Constructor arguments are recursively constructed using the {@link Context}. */
     public static <T> Read<T> tuple(Class<T> klass) {
         return new TupleRead<T>(klass);
     }
 
+    /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the supplied {@code Read} instances. */
     public static <T> Read<T> tuple(Class<T> klass, Collection<Read<?>> reads) {
         return new TupleRead<T>(klass, reads);
     }
 
+    /** Mapping treating {@code Read} as a functor. */
     public static <T, U> Read<U> map(Class<U> klass, Read<T> read, Function<T, U> f) {
         return new Read<U>() {
             @Override
@@ -249,10 +254,17 @@ public class Reads {
         protected abstract T get(ResultSet rs, int ix) throws SQLException;
     }
 
+    /**
+     * Constructs a bean using reflection.
+     * <p>
+     * The named bean properties are extracted from the SQL result in the order given. The value of the bean
+     * property is constructed using the default {@code Read} associated for that type in the {@link Context}.
+     */
     public static <T> Read<T> bean(Class<T> klass, String... fields) {
         return new BeanRead<>(klass, fields);
     }
 
+    /** As {@link #bean(Class, String...)}, but allows you to customize how the property values are constructed. */
     public static <T> Read<T> bean(Class<T> klass, Collection<String> fields, Collection<Read<?>> reads) {
         return new BeanRead<>(klass, fields, reads);
     }
