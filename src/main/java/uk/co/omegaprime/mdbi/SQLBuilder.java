@@ -40,13 +40,16 @@ class PreparedSQLBuilder {
     private final SQLBuilder builder;
 
     public PreparedSQLBuilder(Function<Object, Integer> visitHole) {
-        this.builder = new SQLBuilder(arg -> {
-            final int arity = visitHole.apply(arg);
-            for (int i = 0; i < arity; i++) {
-                if (i != 0) this.builder.visitSQLLiteral(",");
-                this.builder.visitSQLLiteral("?");
-            }
+        this.builder = new SQLBuilder(new Consumer<Object>() {
+            @Override
+            public void accept(Object arg) {
+                final int arity = visitHole.apply(arg);
+                for (int i = 0; i < arity; i++) {
+                    if (i != 0) PreparedSQLBuilder.this.builder.visitSQLLiteral(",");
+                    PreparedSQLBuilder.this.builder.visitSQLLiteral("?");
+                }
 
+            }
         });
     }
 
@@ -63,11 +66,14 @@ class UnpreparedSQLBuilder {
     private final SQLBuilder builder;
 
     public UnpreparedSQLBuilder(Function<Object, List<String>> visitHole) {
-        this.builder = new SQLBuilder(arg ->{
-            final List<String> xs = visitHole.apply(arg);
-            for (int i = 0; i < xs.size(); i++) {
-                if (i != 0) this.builder.visitSQLLiteral(",");
-                this.builder.visitSQLLiteral(xs.get(i));
+        this.builder = new SQLBuilder(new Consumer<Object>() {
+            @Override
+            public void accept(Object arg) {
+                final List<String> xs = visitHole.apply(arg);
+                for (int i = 0; i < xs.size(); i++) {
+                    if (i != 0) UnpreparedSQLBuilder.this.builder.visitSQLLiteral(",");
+                    UnpreparedSQLBuilder.this.builder.visitSQLLiteral(xs.get(i));
+                }
             }
         });
     }
