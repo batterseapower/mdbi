@@ -64,7 +64,7 @@ public class Sample {
                 MDBI.of(conn).execute(sql("insert into people (name, age) values ('foo', 1)"));
                 throw new IllegalArgumentException("Changed my mind!");
             });
-        } catch (IllegalArgumentException _) {}
+        } catch (IllegalArgumentException _ignored) {}
 
         final int postTransactionCount = MDBI.of(conn).queryFirst(sql("select count(*) from people"), int.class);
         println(postTransactionCount); // 5
