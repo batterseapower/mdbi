@@ -4,20 +4,36 @@ buildscript {
     }
     dependencies {
         classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
     }
 }
 
 apply plugin: 'java'
+
+// Lets us sign our artifacts, construct a POM and use the uploadArchives task to upload to Sonatype OSS
+// The disadvantage of going this route is that anything we upload to Sonatype has to be
+// manually "closed" in the web interface (Nexus: https://oss.sonatype.org/) before it
+// shows up on Maven Central.
 apply plugin: 'com.bmuschko.nexus'
 
+// So we augment Nexus with this plugin, which lets us upload the signed, POMified artifacts
+// to Bintray. Bintray operate a Maven repo called JCenter which can be used as an alternative
+// to Maven Central, but which also supports fully automatic syncing to Maven Central via Sonatype OSS.
+// So this plugin lets us upload to Bintray + JCenter + Maven Central with a single "bintrayUpload" task
+apply plugin: 'com.jfrog.bintray'
+
 group = 'uk.co.omega-prime'
-version = '1.0.0'
+version = '1.0.3'
+
+def projectName = 'mdbi'
+def projectDescription = 'Max\'s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI'
+
 sourceCompatibility = 1.8
 
 jar {
-    baseName = 'mdbi'
+    baseName = projectName
     manifest {
-        attributes 'Implementation-Title': 'mdbi',
+        attributes 'Implementation-Title': projectName,
                    'Implementation-Version': version
     }
 }
@@ -32,10 +48,11 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
+// Used by the nexus plugin
 modifyPom {
     project {
-        name 'mdbi'
-        description 'Max\'s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI'
+        name projectName
+        description projectDescription
         url 'http://batterseapower.github.io/mdbi/'
 
         scm {
@@ -60,4 +77,41 @@ modifyPom {
             }
         }
     }
+}
+
+// I tried to have the Nexus plugin sign things, rather than using the Bintray
+// automatic signing support, but when e.g. mdbi-1.0.2-sources.jar.asc got uploaded
+// to Bintray, Bintray seemed to mangle the filename to mdbi-1.0.2-sources-jar.asc.
+// This would obviously cause the Maven Central publish to fail because it couldn't
+// figure out what file that was meant to be a signature for. So I gave up, gave
+// Bintray my GPG private key, and turned on auto-signing in the BinTray repo settings.
+nexus {
+    sign = false
+}
+
+// Used by the bintray plugin
+bintray {
+    user = System.getenv().getOrDefault('BINTRAY_USER', bintrayUsername)
+    key  = System.getenv().getOrDefault('BINTRAY_KEY', bintrayApiKey)
+    publish = true
+
+    pkg {
+        repo = 'maven'
+        name = projectName
+        licenses = ['Apache-2.0']
+        vcsUrl = 'https://github.com/batterseapower/mdbi.git'
+
+        version {
+            name = project.version
+            desc = projectDescription
+            released = new Date()
+
+            mavenCentralSync {
+                user     = System.getenv().getOrDefault('SONATYPE_USER', nexusUsername)
+                password = System.getenv().getOrDefault('SONATYPE_PASSWORD', nexusPassword)
+            }
+        }
+    }
+
+    configurations = ['archives']
 }
