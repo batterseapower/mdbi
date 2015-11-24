@@ -220,6 +220,20 @@ public class MDBI {
         return query(sql, BatchReads.first(read));
     }
 
+    /**
+     * Executes a query and returns the first row of the result interpreted as the supplied class, or null if there is no such row.
+     */
+    public <T> T queryFirstOrNull(SQL sql, Class<T> klass) throws SQLException {
+        return queryFirstOrNull(sql, new ContextRead<>(klass));
+    }
+
+    /**
+     * Executes a query and returns the first row of the result interpreted using the supplied {@code Read} instance, or null if there is no such row.
+     */
+    public <T> T queryFirstOrNull(SQL sql, Read<T> read) throws SQLException {
+        return query(sql, BatchReads.firstOrNull(read));
+    }
+
     /** Executes a query and interprets the result in a fully customizable way using the {@code BatchRead} instance. */
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
         if (prepared) {
