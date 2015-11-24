@@ -89,29 +89,32 @@ nexus {
     sign = false
 }
 
-// Used by the bintray plugin
-bintray {
-    user = System.getenv().getOrDefault('BINTRAY_USER', bintrayUsername)
-    key  = System.getenv().getOrDefault('BINTRAY_KEY', bintrayApiKey)
-    publish = true
+// e.g. Travis won't have the Bintray config
+if (hasProperty('bintrayUsername') || System.getenv().containsKey('BINTRAY_USER')) {
+    // Used by the bintray plugin
+    bintray {
+        user = System.getenv().getOrDefault('BINTRAY_USER', bintrayUsername)
+        key  = System.getenv().getOrDefault('BINTRAY_KEY', bintrayApiKey)
+        publish = true
 
-    pkg {
-        repo = 'maven'
-        name = projectName
-        licenses = ['Apache-2.0']
-        vcsUrl = 'https://github.com/batterseapower/mdbi.git'
+        pkg {
+            repo = 'maven'
+            name = projectName
+            licenses = ['Apache-2.0']
+            vcsUrl = 'https://github.com/batterseapower/mdbi.git'
 
-        version {
-            name = project.version
-            desc = projectDescription
-            released = new Date()
+            version {
+                name = project.version
+                desc = projectDescription
+                released = new Date()
 
-            mavenCentralSync {
-                user     = System.getenv().getOrDefault('SONATYPE_USER', nexusUsername)
-                password = System.getenv().getOrDefault('SONATYPE_PASSWORD', nexusPassword)
+                mavenCentralSync {
+                    user     = System.getenv().getOrDefault('SONATYPE_USER', nexusUsername)
+                    password = System.getenv().getOrDefault('SONATYPE_PASSWORD', nexusPassword)
+                }
             }
         }
-    }
 
-    configurations = ['archives']
+        configurations = ['archives']
+    }
 }
