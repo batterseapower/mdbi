@@ -6,6 +6,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.omegaprime.mdbi.*;
 
+import java.lang.reflect.Constructor;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -16,9 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
 
 public class MDBITest {
@@ -76,6 +75,59 @@ public class MDBITest {
                 .build();
         MDBI.of(ctxt, conn).execute(sql("insert into person (id, name) values (").$(new Row(1, "Max")).sql(")"));
         Assert.assertEquals("Max", m.queryFirst(sql("select name from person"), String.class));
+    }
+
+    public static class TwoConstructors {
+        public final int id;
+        public final String name;
+
+        public TwoConstructors(int id, int name) {
+            this(id, "Via Ints " + Integer.toString(name));
+        }
+
+        public TwoConstructors(int id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+
+    @Test
+    public void tupleReadAmbiguousConstructor1() throws SQLException {
+        final Context ctxt = Context.Builder.createDefault()
+                .registerRead(TwoConstructors.class, Reads.tupleWithFieldClasses(TwoConstructors.class, Arrays.asList(int.class, int.class)))
+                .build();
+
+        final TwoConstructors result = MDBI.of(ctxt, conn).queryFirst(sql("select 1, 1"), TwoConstructors.class);
+        assertEquals("Via Ints 1", result.name);
+    }
+
+    @Test
+    public void tupleReadAmbiguousConstructor2() throws SQLException {
+        final Context ctxt = Context.Builder.createDefault()
+                .registerRead(TwoConstructors.class, Reads.tupleWithFieldClasses(TwoConstructors.class, Arrays.asList(int.class, String.class)))
+                .build();
+
+        final TwoConstructors result = MDBI.of(ctxt, conn).queryFirst(sql("select 1, 1"), TwoConstructors.class);
+        assertEquals("1", result.name);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void tupleReadAmbiguousConstructorsUnresolvable() throws SQLException {
+        Reads.tuple(TwoConstructors.class);
+    }
+
+    public static class ConstructorSubtyping {
+        public ConstructorSubtyping(CharSequence cs) {}
+    }
+
+    @Test
+    public void tupleReadSubtyping() throws SQLException {
+        final Context ctxt = Context.Builder.createDefault()
+                .registerRead(ConstructorSubtyping.class, Reads.tupleWithFieldClasses(ConstructorSubtyping.class, Arrays.asList(String.class)))
+                .build();
+
+        final ConstructorSubtyping result = MDBI.of(ctxt, conn).queryFirst(sql("select 'hello'"), ConstructorSubtyping.class);
+        assertNotNull(result);
     }
 
     @Test(expected = IllegalArgumentException.class)

@@ -114,7 +114,7 @@ public class MDBI {
 
     /** Executes a query and throws away the result, if any. */
     public void execute(SQL sql) throws SQLException {
-        query(sql, (ctxt, s) -> {
+        query(sql, (StatementlikeBatchRead<Void>) (ctxt, s) -> {
             s.execute();
             return null;
         });
@@ -173,7 +173,7 @@ public class MDBI {
 
     /** Executes a query and returns the number of rows affected */
     public long update(SQL sql) throws SQLException {
-        return query(sql, (ctxt, s) -> {
+        return query(sql, (StatementlikeBatchRead<Long>) (ctxt, s) -> {
             try {
                 return s.executeLargeUpdate();
             } catch (UnsupportedOperationException _unsupported) {
@@ -236,6 +236,11 @@ public class MDBI {
 
     /** Executes a query and interprets the result in a fully customizable way using the {@code BatchRead} instance. */
     public <T> T query(SQL sql, BatchRead<T> batchRead) throws SQLException {
+        return query(sql, StatementlikeBatchReads.fromBatchRead(batchRead));
+    }
+
+    /** Executes a query and interprets the result in a fully customizable way using the {@code StatementlikeBatchRead} instance. */
+    public <T> T query(SQL sql, StatementlikeBatchRead<T> batchRead) throws SQLException {
         if (prepared) {
             return connectionObtainer.with(c -> {
                 try (final PreparedStatement ps = BespokePreparedSQLBuilder.build(sql, context.writeContext(), c)) {
@@ -251,6 +256,7 @@ public class MDBI {
         }
     }
 
+    @SuppressWarnings("TryWithIdenticalCatches")
     private <T> T retry(Connection c, SQLAction<T> act) throws SQLException {
         if (!c.getAutoCommit()) {
             // Already in transaction, we can't safely retry because failure of the SQL action we

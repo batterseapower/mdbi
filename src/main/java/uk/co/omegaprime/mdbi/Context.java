@@ -51,6 +51,10 @@ public class Context {
             return context;
         }
 
+        public static Builder createFromContext(Context context) {
+            return new Builder(context.readers, context.writers);
+        }
+
         private Builder(Reads.Map readers, Writes.Map writers) {
             this.readers = readers;
             this.writers = writers;
@@ -80,8 +84,8 @@ public class Context {
         }
     }
 
-    private final Read.Context readers;
-    private final Write.Context writers;
+    private final Reads.Map readers;
+    private final Writes.Map writers;
 
     private Context(Reads.Map readers, Writes.Map writers) {
         this.readers = readers;

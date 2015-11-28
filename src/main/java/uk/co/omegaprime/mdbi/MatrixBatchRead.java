@@ -2,6 +2,7 @@ package uk.co.omegaprime.mdbi;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Array;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,31 +20,29 @@ class MatrixBatchRead implements BatchRead<Object[]> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object[] get(@Nonnull Read.Context ctxt, @Nonnull Statementlike ps) throws SQLException {
-        return BatchReads.fromResultSetBatchRead((ctxt1, rs) -> {
-            final List<BoundRead<?>> boundReads = reads.stream().map(read -> read.bind(ctxt1)).collect(Collectors.toList());
+    public Object[] get(@Nonnull Read.Context ctxt, @Nonnull ResultSet rs) throws SQLException {
+        final List<BoundRead<?>> boundReads = reads.stream().map(read -> read.bind(ctxt)).collect(Collectors.toList());
 
-            final List<?>[] columnLists = new List<?>[reads.size()];
+        final List<?>[] columnLists = new List<?>[reads.size()];
+        for (int i = 0; i < columnLists.length; i++) {
+            columnLists[i] = new ArrayList<>();
+        }
+
+        while (rs.next()) {
+            final IndexRef ix = new IndexRef();
             for (int i = 0; i < columnLists.length; i++) {
-                columnLists[i] = new ArrayList<>();
+                ((List<Object>)columnLists[i]).add(boundReads.get(i).get(rs, ix));
             }
+        }
 
-            while (rs.next()) {
-                final IndexRef ix = new IndexRef();
-                for (int i = 0; i < columnLists.length; i++) {
-                    ((List<Object>)columnLists[i]).add(boundReads.get(i).get(rs, ix));
-                }
-            }
+        final Object[] columns = new Object[columnLists.length];
+        final Iterator<Read<?>> readsIt = reads.iterator();
+        for (int i = 0; i < columnLists.length; i++) {
+            final List list = columnLists[i];
+            columns[i] = listToArray(readsIt.next().getElementClass(), list);
+        }
 
-            final Object[] columns = new Object[columnLists.length];
-            final Iterator<Read<?>> readsIt = reads.iterator();
-            for (int i = 0; i < columnLists.length; i++) {
-                final List list = columnLists[i];
-                columns[i] = listToArray(readsIt.next().getElementClass(), list);
-            }
-
-            return columns;
-        }).get(ctxt, ps);
+        return columns;
     }
 
     private static Object listToArray(Class<?> klass, List<?> list) {

@@ -13,16 +13,14 @@ class TupleRead<T> implements Read<T> {
 
     public TupleRead(Class<T> klass) {
         this.klass = klass;
-        this.constructor = Reflection.getConstructor(klass);
+        this.constructor = Reflection.getUniqueConstructor(klass);
         this.reads = Arrays.asList(constructor.getParameterTypes()).stream().map(ContextRead::new).collect(Collectors.toList());
     }
 
     public TupleRead(Class<T> klass, Collection<Read<?>> reads) {
         this.klass = klass;
-        this.constructor = Reflection.getConstructor(klass);
+        this.constructor = Reflection.getCompatibleConstructor(klass, reads.stream().map(Read::getElementClass).collect(Collectors.toList()));
         this.reads = reads;
-
-        Reflection.checkReadsConformance("Constructor " + constructor, Arrays.asList(constructor.getParameterTypes()), reads);
     }
 
     @Override

@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Construct useful instances of the {@link Write} interface. */
 public class Writes {
@@ -215,6 +216,11 @@ public class Writes {
         return new BeanWrite<>(klass, fields);
     }
 
+    /** Turns a bean into SQL by serialized the named fields in order using the contextual {@link Write} instances for the supplied classes. */
+    public static <T> Write<T> beanWithFieldClasses(Class<T> klass, Collection<String> fields, Collection<Class<?>> klasses) {
+        return new BeanWrite<>(klass, fields, klasses.stream().map(argklass -> new ContextWrite<>(argklass)).collect(Collectors.toList()));
+    }
+
     /** Turns a bean into SQL by serialized the named fields in order using the supplied {@link Write} instances. */
     public static <T> Write<T> bean(Class<T> klass, Collection<String> fields, Collection<Write<?>> reads) {
         return new BeanWrite<>(klass, fields, reads);
@@ -230,6 +236,11 @@ public class Writes {
                 s.setObject(ix, null);
             }
         };
+    }
+
+    /** Mapping treating {@code Write} as a co-functor. */
+    public static <T, U> Write<U> map(Class<T> klass, Function<U, T> f) {
+        return map(new ContextWrite<>(klass), f);
     }
 
     /** Mapping treating {@code Write} as a co-functor. */

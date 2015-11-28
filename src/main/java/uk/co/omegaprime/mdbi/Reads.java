@@ -11,6 +11,7 @@ import java.time.LocalTime;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** Useful methods for constructing instances of the {@link Read} interface. */
 public class Reads {
@@ -182,9 +183,19 @@ public class Reads {
         return new TupleRead<T>(klass);
     }
 
+    /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the context-default {@code Read} instance for the supplied classes. */
+    public static <T> Read<T> tupleWithFieldClasses(Class<T> klass, Collection<Class<?>> klasses) {
+        return tuple(klass, klasses.stream().map(argklass -> new ContextRead<>(argklass)).collect(Collectors.toList()));
+    }
+
     /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the supplied {@code Read} instances. */
     public static <T> Read<T> tuple(Class<T> klass, Collection<Read<?>> reads) {
         return new TupleRead<T>(klass, reads);
+    }
+
+    /** Mapping treating {@code Read} as a functor. */
+    public static <T, U> Read<U> map(Class<U> klass, Class<T> readKlass, Function<T, U> f) {
+        return map(klass, new ContextRead<>(readKlass), f);
     }
 
     /** Mapping treating {@code Read} as a functor. */
@@ -262,6 +273,11 @@ public class Reads {
      */
     public static <T> Read<T> bean(Class<T> klass, String... fields) {
         return new BeanRead<>(klass, fields);
+    }
+
+    /** As {@link #bean(Class, String...)}, but allows you to explicitly specify the types of the fields. */
+    public static <T> Read<T> beanWithFieldClasses(Class<T> klass, Collection<String> fields, Collection<Class<?>> klasses) {
+        return new BeanRead<>(klass, fields, klasses.stream().map(argklass -> new ContextRead<>(argklass)).collect(Collectors.toList()));
     }
 
     /** As {@link #bean(Class, String...)}, but allows you to customize how the property values are constructed. */

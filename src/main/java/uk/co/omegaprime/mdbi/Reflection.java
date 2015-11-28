@@ -4,17 +4,18 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 class Reflection {
     private Reflection() {}
 
-    @SuppressWarnings("unchecked")
-    public static <T> Constructor<T> getConstructor(Class<T> klass) {
+    public static <T> Constructor<T> getUniqueConstructor(Class<T> klass) {
         final Constructor<?>[] constructors = klass.getConstructors();
+        return chooseUniqueConstructor(klass, constructors);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Constructor<T> chooseUniqueConstructor(Class<T> klass, Constructor<?>[] constructors) {
         if (constructors.length == 0) {
             throw new IllegalArgumentException("No public constructors for " + klass);
         } else if (constructors.length > 1) {
@@ -22,6 +23,71 @@ class Reflection {
         } else {
             return (Constructor<T>)constructors[0];
         }
+    }
+
+    public static <T> Constructor<T> getCompatibleConstructor(Class<T> klass, List<Class<?>> klasses) {
+        final Constructor<?>[] constructors = klass.getConstructors();
+        final List<Constructor<?>> candidates = new ArrayList<>();
+
+        // Sort of a crummy implementation of the overload rules: http://docs.oracle.com/javase/specs/jls/se7/html/jls-15.html#jls-15.12.2
+        // It might be worth taking a dependency just to get this right. It's hard to do, and it's not our core competency.
+        for (Constructor<?> constructor : constructors) {
+            final Class<?>[] params = constructor.getParameterTypes();
+            if (params.length != klasses.size()) continue;
+
+            boolean compatible = true;
+            for (int i = 0; i < params.length; i++) {
+                if (!params[i].isAssignableFrom(klasses.get(i))) {
+                    compatible = false;
+                    break;
+                }
+            }
+
+            if (!compatible) continue;
+
+            candidates.add(constructor);
+        }
+
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+
+            final Iterator<Constructor<?>> it = candidates.iterator();
+            while (it.hasNext()) {
+                final Constructor<?> constructor = it.next();
+                final Class<?>[] params = constructor.getParameterTypes();
+
+                boolean atLeastOneOtherConstructorIsAtLeastAsSpecific = false;
+                for (Constructor<?> otherConstructor : candidates) {
+                    if (otherConstructor == constructor) continue;
+
+                    final Class<?>[] otherParams = otherConstructor.getParameterTypes();
+                    if (otherParams.length != params.length) continue;
+
+                    boolean otherConstructorIsAtLeastAsSpecific = true;
+                    for (int i = 0; i < params.length; i++) {
+                        if (!params[i].isAssignableFrom(otherParams[i])) {
+                            // We can accept something that "other" could not, so we are more specific
+                            otherConstructorIsAtLeastAsSpecific = false;
+                            break;
+                        }
+                    }
+
+                    if (otherConstructorIsAtLeastAsSpecific) {
+                        // All of params[i] are assignable from otherParams[i]
+                        atLeastOneOtherConstructorIsAtLeastAsSpecific = true;
+                        break;
+                    }
+                }
+
+                if (atLeastOneOtherConstructorIsAtLeastAsSpecific) {
+                    changed = true;
+                    it.remove();
+                }
+            }
+        }
+
+        return chooseUniqueConstructor(klass, candidates.toArray(new Constructor<?>[candidates.size()]));
     }
 
     public static <T> Constructor<T> getBeanConstructor(Class<T> klass) {
