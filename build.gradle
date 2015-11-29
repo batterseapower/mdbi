@@ -22,8 +22,9 @@ apply plugin: 'com.bmuschko.nexus'
 // So this plugin lets us upload to Bintray + JCenter + Maven Central with a single "bintrayUpload" task
 apply plugin: 'com.jfrog.bintray'
 
-group = 'uk.co.omega-prime'
+// When you update the version number, please follow the principles of Semantic Versioning: http://semver.org
 version = '2.0.0'
+group = 'uk.co.omega-prime'
 
 def projectName = 'mdbi'
 def projectDescription = 'Max\'s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI'
