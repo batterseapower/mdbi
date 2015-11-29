@@ -16,6 +16,7 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
@@ -325,7 +326,7 @@ public class MDBITest {
     }
 
     @Test
-    public void variance() throws SQLException {
+    public void contextLookupVariance() throws SQLException {
         final Context ctxt = Context.Builder.createDefault()
             // Write a subtype using a mapping designed for a supertype
             .registerWrite(Subtype.class, Writes.<Integer, Supertype>map(Writes.PRIM_INT, t -> t.x))
@@ -336,5 +337,26 @@ public class MDBITest {
         final Supertype result = MDBI.of(ctxt, conn).queryFirst(sql("select ").$(new Subtype(1)), Supertype.class);
         assertTrue(result instanceof Subtype);
         assertEquals(1, result.x);
+    }
+
+    @Test
+    public void writeReadList() throws SQLException {
+        final Write<List<Object>> write = Writes.listWithClasses(Arrays.<Class<?>>asList(Integer.class, String.class));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (").$(write, Arrays.asList(1, "Moomin")).sql(")"));
+
+        final Read<List<Object>> read = Reads.listWithClasses(Arrays.asList(Integer.class, String.class));
+        final List<Object> result = MDBI.of(conn).queryFirst(sql("select id, name from person where name = 'Moomin'"), read);
+        assertEquals(result, Arrays.asList(1, "Moomin"));
+    }
+
+    @Test
+    public void readLabelledMap() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Moomin')"));
+
+        final Read<Map<String, Object>> read = Reads.labelledMapWithClasses(Arrays.asList(Integer.class, String.class));
+        final Map<String, Object> result = MDBI.of(conn).queryFirst(sql("select id, name from person where name = 'Moomin'"), read);
+        assertEquals(2, result.size());
+        assertEquals(1, result.get("id"));
+        assertEquals("Moomin", result.get("name"));
     }
 }

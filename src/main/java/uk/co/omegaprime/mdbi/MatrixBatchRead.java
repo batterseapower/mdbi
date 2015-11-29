@@ -29,7 +29,7 @@ class MatrixBatchRead implements BatchRead<Object[]> {
         }
 
         while (rs.next()) {
-            final IndexRef ix = new IndexRef();
+            final IndexRef ix = IndexRef.create();
             for (int i = 0; i < columnLists.length; i++) {
                 ((List<Object>)columnLists[i]).add(boundReads.get(i).get(rs, ix));
             }

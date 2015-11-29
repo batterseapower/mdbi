@@ -21,7 +21,7 @@ class CollectionBatchRead<T, CollectionT extends Collection<T>> implements Batch
 
         final CollectionT result = factory.get();
         while (rs.next()) {
-            result.add(boundRead.get(rs, new IndexRef()));
+            result.add(boundRead.get(rs, IndexRef.create()));
         }
         return result;
     }

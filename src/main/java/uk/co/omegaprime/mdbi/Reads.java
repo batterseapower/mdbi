@@ -8,8 +8,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -283,5 +282,72 @@ public class Reads {
     /** As {@link #bean(Class, String...)}, but allows you to customize how the property values are constructed. */
     public static <T> Read<T> bean(Class<T> klass, Collection<String> fields, Collection<Read<?>> reads) {
         return new BeanRead<>(klass, fields, reads);
+    }
+
+    /** Reads the given classes one after another, aggregating the results from the row into a {@code List} */
+    public static <T> Read<List<T>> listWithClasses(Collection<Class<? extends T>> klasses) {
+        return list(klasses.stream().map(klass -> new ContextRead<>(klass)).collect(Collectors.toList()));
+    }
+
+    /** Reads the given elements one after another, aggregating the results from the row into a {@code List} */
+    public static <T> Read<List<T>> list(Collection<Read<? extends T>> reads) {
+        return new Read<List<T>>() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public Class<List<T>> getElementClass() {
+                return (Class<List<T>>)(Class)List.class;
+            }
+
+            @Override
+            public BoundRead<? extends List<T>> bind(Context ctxt) {
+                final List<BoundRead<? extends T>> bounds = reads.stream().map(read -> read.bind(ctxt)).collect(Collectors.toList());
+
+                return (rs, ix) -> {
+                    final List<T> result = new ArrayList<>();
+                    for (BoundRead<? extends T> bound : bounds) {
+                        result.add(bound.get(rs, ix));
+                    }
+                    return result;
+                };
+            }
+        };
+    }
+
+    /** As {@link #labelledMap(Collection)}, but using the {@code Read} instance associated with the class in the {@link Context}. */
+    public static <T> Read<java.util.Map<String, T>> labelledMapWithClasses(Collection<Class<? extends T>> klasses) {
+        return labelledMap(klasses.stream().map(klass -> new ContextRead<>(klass)).collect(Collectors.toList()));
+    }
+
+    /**
+     * Reads the given classes one after another, aggregating the results from the row into a {@code Map} keyed by the column name.
+     *
+     * If more than one column shares the same name, {@code IllegalArgumentException} will be thrown.
+     */
+    public static <T> Read<java.util.Map<String, T>> labelledMap(Collection<Read<? extends T>> reads) {
+        return new Read<java.util.Map<String, T>>() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public Class<java.util.Map<String, T>> getElementClass() {
+                return (Class<java.util.Map<String, T>>)(Class)java.util.Map.class;
+            }
+
+            @Override
+            public BoundRead<? extends java.util.Map<String, T>> bind(Context ctxt) {
+                final List<BoundRead<? extends T>> bounds = reads.stream().map(read -> read.bind(ctxt)).collect(Collectors.toList());
+
+                return (rs, ix) -> {
+                    final java.util.Map<String, T> result = new LinkedHashMap<>();
+                    for (BoundRead<? extends T> bound : bounds) {
+                        final String columnName = rs.getMetaData().getColumnName(ix.peek());
+                        if (result.containsKey(columnName)) {
+                            throw new IllegalArgumentException("Column " + columnName + " occurs twice in the result");
+                        }
+
+                        result.put(columnName, bound.get(rs, ix));
+                    }
+                    return result;
+                };
+            }
+        };
     }
 }

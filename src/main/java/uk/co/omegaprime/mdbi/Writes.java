@@ -10,10 +10,7 @@ import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -262,6 +259,49 @@ public class Writes {
                 @Override
                 public List<String> asSQL(@Nullable U x) {
                     return boundWrite.asSQL(f.apply(x));
+                }
+            };
+        };
+    }
+
+    /** Writes the given classes one after another into SQL, picking them from the supplied {@code List} */
+    public static <T> Write<List<T>> listWithClasses(Collection<Class<? extends T>> klasses) {
+        return list(klasses.stream().map(klass -> new ContextWrite<>(klass)).collect(Collectors.toList()));
+    }
+
+    /** Writes a fixed number of elements into the result */
+    public static <T> Write<List<T>> list(Collection<Write<? extends T>> writes) {
+        return ctxt -> {
+            final List<BoundWrite<?>> bounds = writes.stream().map(write -> write.bind(ctxt)).collect(Collectors.toList());
+
+            return new BoundWrite<List<T>>() {
+                @Override
+                public int arity() {
+                    return bounds.stream().mapToInt(BoundWrite::arity).sum();
+                }
+
+                @SuppressWarnings("unchecked")
+                @Override
+                public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, @Nullable List<T> x) throws SQLException {
+                    if (x == null) throw new NullPointerException();
+                    int i = 0;
+                    for (BoundWrite<?> bound : bounds) {
+                        ((BoundWrite<Object>)bound).set(s, ix, x.get(i++));
+                    }
+                }
+
+                @SuppressWarnings("unchecked")
+                @Nonnull
+                @Override
+                public List<String> asSQL(@Nullable List<T> x) {
+                    if (x == null) throw new NullPointerException();
+
+                    final List<String> result = new ArrayList<>();
+                    int i = 0;
+                    for (BoundWrite<?> bound : bounds) {
+                        result.addAll(((BoundWrite<Object>)bound).asSQL(x.get(i++)));
+                    }
+                    return result;
                 }
             };
         };

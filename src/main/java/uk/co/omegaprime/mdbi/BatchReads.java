@@ -16,7 +16,7 @@ public class BatchReads {
     public static <T> BatchRead<T> first(Read<T> read) {
         return (ctxt, rs) -> {
             if (rs.next()) {
-                return read.bind(ctxt).get(rs, new IndexRef());
+                return read.bind(ctxt).get(rs, IndexRef.create());
             } else {
                 throw new NoSuchElementException();
             }
@@ -30,7 +30,7 @@ public class BatchReads {
 
     /** Returns the first row of the {@code ResultSet}, or null if no such row exists. */
     public static <T> BatchRead<T> firstOrNull(Read<T> read) {
-        return (ctxt, rs) -> rs.next() ? read.bind(ctxt).get(rs, new IndexRef()) : null;
+        return (ctxt, rs) -> rs.next() ? read.bind(ctxt).get(rs, IndexRef.create()) : null;
     }
 
     public static <T> BatchRead<List<T>> asList(Class<T> klass) {

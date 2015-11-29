@@ -198,7 +198,7 @@ class BatchPreparedSQLBuilder {
 
         final List<Iterator> iterators = batchBuilt.stream().map(Collection::iterator).collect(Collectors.toList());
         for (int i = 0; i < size; i++) {
-            final IndexRef ref = new IndexRef();
+            final IndexRef ref = IndexRef.create();
             for (int j = 0; j < iterators.size(); j++) {
                 actions.get(j).write(stmt, ref, iterators.get(j).next());
             }
@@ -246,7 +246,7 @@ class BespokePreparedSQLBuilder {
         sqlBuilder.visitSQL(sql);
         final PreparedStatement stmt = sqlBuilder.build(connection);
 
-        final IndexRef ref = new IndexRef();
+        final IndexRef ref = IndexRef.create();
         for (Action action : actions) {
             action.write(stmt, ref);
         }

@@ -31,7 +31,7 @@ class MapBatchRead<K, V, MapT extends Map<K, V>> implements BatchRead<Map<K, V>>
         final BoundRead<? extends V> boundReadValue = readValue.bind(ctxt);
         final MapT result = factory.get();
         while (rs.next()) {
-            final IndexRef ix = new IndexRef();
+            final IndexRef ix = IndexRef.create();
             final K key = boundReadKey.get(rs, ix);
             final V value = boundReadValue.get(rs, ix);
 
