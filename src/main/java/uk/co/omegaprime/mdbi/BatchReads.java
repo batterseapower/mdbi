@@ -2,6 +2,7 @@ package uk.co.omegaprime.mdbi;
 
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /** Functions for creating useful instances of {@link BatchRead}. */
 public class BatchReads {
@@ -105,11 +106,26 @@ public class BatchReads {
      * then your {@code ResultSet} will be turned into an {@code Object[]} with two elements: a {@code String[]} and a {@code int[]}.
      */
     public static BatchRead<Object[]> matrix(Class<?>... klasses) {
-        return new MatrixBatchRead(klasses);
+        return matrix(Arrays.asList(klasses).stream().map(ContextRead::new).collect(Collectors.toList()));
     }
 
     /** As {@link #matrix(Class[])}, but for the case where you want to be explicit about how the columns are constructed. */
     public static BatchRead<Object[]> matrix(Collection<Read<?>> reads) {
         return new MatrixBatchRead(reads);
+    }
+
+    /**
+     * Returns the {@code ResultSet} interpreted as a map of column names to column vectors.
+     * <p>
+     * The classes specify the element types of the column vectors. So if you call {@code matrix(String.class, int.class)}
+     * then your {@code ResultSet} will be turned into a {@code Map} with two elements: a {@code String[]} and a {@code int[]}.
+     */
+    public static BatchRead<Map<String, Object>> labelledMatrix(Class<?>... klasses) {
+        return labelledMatrix(Arrays.asList(klasses).stream().map(ContextRead::new).collect(Collectors.toList()));
+    }
+
+    /** As {@link #labelledMatrix(Class[])}, but for the case where you want to be explicit about how the columns are constructed. */
+    public static BatchRead<Map<String, Object>> labelledMatrix(Collection<Read<?>> reads) {
+        return new LabelledMatrixBatchRead(reads);
     }
 }

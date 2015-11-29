@@ -42,6 +42,11 @@ class BeanRead<T> implements Read<T> {
         final List<BoundRead> boundReads = reads.stream().map(r -> r.bind(ctxt)).collect(Collectors.toList());
         return new BoundRead<T>() {
             @Override
+            public int arity() {
+                return boundReads.stream().mapToInt(BoundRead::arity).sum();
+            }
+
+            @Override
             public T get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
                 final T x = Reflection.constructUnchecked(constructor, new Object[0]);
                 for (int i = 0; i < setters.length; i++) {

@@ -1,6 +1,9 @@
 package uk.co.omegaprime.mdbi;
 
+import javax.annotation.Nonnull;
 import java.lang.reflect.Constructor;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -31,12 +34,20 @@ class TupleRead<T> implements Read<T> {
     @Override
     public BoundRead<T> bind(Read.Context ctxt) {
         final List<BoundRead<?>> boundReads = reads.stream().map(r -> r.bind(ctxt)).collect(Collectors.toList());
-        return (rs, ix) -> {
-            final Object[] arguments = new Object[boundReads.size()];
-            for (int i = 0; i < arguments.length; i++) {
-                arguments[i] = boundReads.get(i).get(rs, ix);
+        return new BoundRead<T>() {
+            @Override
+            public int arity() {
+                return boundReads.stream().mapToInt(BoundRead::arity).sum();
             }
-            return Reflection.constructUnchecked(constructor, arguments);
+
+            @Override
+            public T get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
+                final Object[] arguments = new Object[boundReads.size()];
+                for (int i = 0; i < arguments.length; i++) {
+                    arguments[i] = boundReads.get(i).get(rs, ix);
+                }
+                return Reflection.constructUnchecked(constructor, arguments);
+            }
         };
     }
 }

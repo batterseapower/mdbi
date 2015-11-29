@@ -208,7 +208,17 @@ public class Reads {
             @Override
             public BoundRead<? extends U> bind(Context ctxt) {
                 final BoundRead<? extends T> boundRead = read.bind(ctxt);
-                return (rs, ix) -> f.apply(boundRead.get(rs, ix));
+                return new BoundRead<U>() {
+                    @Override
+                    public int arity() {
+                        return boundRead.arity();
+                    }
+
+                    @Override
+                    public U get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
+                        return f.apply(boundRead.get(rs, ix));
+                    }
+                };
             }
         };
     }
@@ -254,6 +264,11 @@ public class Reads {
         @Override
         public BoundRead<T> bind(Context ctxt) {
             return new BoundRead<T>() {
+                @Override
+                public int arity() {
+                    return 1;
+                }
+
                 @Override
                 public T get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
                     return AbstractUnaryRead.this.get(rs, ix.take());
@@ -302,12 +317,20 @@ public class Reads {
             public BoundRead<? extends List<T>> bind(Context ctxt) {
                 final List<BoundRead<? extends T>> bounds = reads.stream().map(read -> read.bind(ctxt)).collect(Collectors.toList());
 
-                return (rs, ix) -> {
-                    final List<T> result = new ArrayList<>();
-                    for (BoundRead<? extends T> bound : bounds) {
-                        result.add(bound.get(rs, ix));
+                return new BoundRead<List<T>>() {
+                    @Override
+                    public int arity() {
+                        return bounds.stream().mapToInt(BoundRead::arity).sum();
                     }
-                    return result;
+
+                    @Override
+                    public List<T> get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
+                        final List<T> result = new ArrayList<>();
+                        for (BoundRead<? extends T> bound : bounds) {
+                            result.add(bound.get(rs, ix));
+                        }
+                        return result;
+                    }
                 };
             }
         };
@@ -335,18 +358,26 @@ public class Reads {
             public BoundRead<? extends java.util.Map<String, T>> bind(Context ctxt) {
                 final List<BoundRead<? extends T>> bounds = reads.stream().map(read -> read.bind(ctxt)).collect(Collectors.toList());
 
-                return (rs, ix) -> {
-                    final java.util.Map<String, T> result = new LinkedHashMap<>();
-                    for (BoundRead<? extends T> bound : bounds) {
-                        // TODO: refactor so that we can do this lookup only once per query..
-                        final String columnName = rs.getMetaData().getColumnName(ix.peek());
-                        if (result.containsKey(columnName)) {
-                            throw new IllegalArgumentException("Column " + columnName + " occurs twice in the result");
-                        }
-
-                        result.put(columnName, bound.get(rs, ix));
+                return new BoundRead<java.util.Map<String, T>>() {
+                    @Override
+                    public int arity() {
+                        return bounds.stream().mapToInt(BoundRead::arity).sum();
                     }
-                    return result;
+
+                    @Override
+                    public java.util.Map<String, T> get(@Nonnull ResultSet rs, @Nonnull IndexRef ix) throws SQLException {
+                        final java.util.Map<String, T> result = new LinkedHashMap<>();
+                        for (BoundRead<? extends T> bound : bounds) {
+                            // TODO: refactor so that we can do this lookup only once per query..
+                            final String columnName = rs.getMetaData().getColumnName(ix.peek());
+                            if (result.containsKey(columnName)) {
+                                throw new IllegalArgumentException("Column " + columnName + " occurs twice in the result");
+                            }
+
+                            result.put(columnName, bound.get(rs, ix));
+                        }
+                        return result;
+                    }
                 };
             }
         };
