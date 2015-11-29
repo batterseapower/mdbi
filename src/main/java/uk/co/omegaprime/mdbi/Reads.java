@@ -338,6 +338,7 @@ public class Reads {
                 return (rs, ix) -> {
                     final java.util.Map<String, T> result = new LinkedHashMap<>();
                     for (BoundRead<? extends T> bound : bounds) {
+                        // TODO: refactor so that we can do this lookup only once per query..
                         final String columnName = rs.getMetaData().getColumnName(ix.peek());
                         if (result.containsKey(columnName)) {
                             throw new IllegalArgumentException("Column " + columnName + " occurs twice in the result");
