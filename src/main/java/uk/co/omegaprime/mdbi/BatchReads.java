@@ -119,6 +119,8 @@ public class BatchReads {
      * <p>
      * The classes specify the element types of the column vectors. So if you call {@code matrix(String.class, int.class)}
      * then your {@code ResultSet} will be turned into a {@code Map} with two elements: a {@code String[]} and a {@code int[]}.
+     * <p>
+     * If a {@code Read} instance spans more than one column, the name chosen will be that of the first column.
      */
     public static BatchRead<Map<String, Object>> labelledMatrix(Class<?>... klasses) {
         return labelledMatrix(Arrays.asList(klasses).stream().map(ContextRead::new).collect(Collectors.toList()));

@@ -343,7 +343,9 @@ public class Reads {
 
     /**
      * Reads the given classes one after another, aggregating the results from the row into a {@code Map} keyed by the column name.
-     *
+     * <p>
+     * If a {@code Read} instance spans more than one column, the name chosen will be that of the first column.
+     * <p>
      * If more than one column shares the same name, {@code IllegalArgumentException} will be thrown.
      */
     public static <T> Read<java.util.Map<String, T>> labelledMap(Collection<Read<? extends T>> reads) {
