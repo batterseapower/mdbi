@@ -48,7 +48,6 @@ public class MDBI {
 
     // TODO: support generated keys? Bit awkward because we need to know we need the feature when we prepare the stmt.
     // FIXME: labelled matrices
-    // FIXME: labelled row fragments
     // FIXME: resurrect parting code
 
     /** Creates a {@code MDBI} where all queries are executed against this connection. */
