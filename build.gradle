@@ -54,7 +54,7 @@ dependencies {
 if (JavaVersion.current().isJava8Compatible()) {
     allprojects {
         tasks.withType(Javadoc) {
-            // The -quiet is because of some sort of weird Gradle bug: https://discuss.gradle.org/t/passing-arguments-to-compiler-and-javadoc/1661
+            // The -quiet is because of some sort of weird JDK JavaCompiler bug: https://discuss.gradle.org/t/passing-arguments-to-compiler-and-javadoc/1661
             options.addStringOption('Xdoclint:all,-missing', '-quiet')
         }
     }
