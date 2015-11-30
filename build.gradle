@@ -1,10 +1,18 @@
+// Quick guide to making a release:
+// $ git tag vX.Y.Z
+// $ gradle bintrayUpload
+//
+// Please choose a version number using the principles of semantic versioning: http://semver.org
+
 buildscript {
     repositories {
         jcenter()
+        maven { url "http://dl.bintray.com/palantir/releases" }
     }
     dependencies {
         classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
+        classpath 'com.palantir:gradle-gitsemver:0.7.0'
     }
 }
 
@@ -22,9 +30,12 @@ apply plugin: 'com.bmuschko.nexus'
 // So this plugin lets us upload to Bintray + JCenter + Maven Central with a single "bintrayUpload" task
 apply plugin: 'com.jfrog.bintray'
 
+apply plugin: 'gitsemver'
+
+// The Palantir plugin infers the version number from the git tags: https://github.com/palantir/gradle-gitsemver
 // When you update the version number, please follow the principles of Semantic Versioning: http://semver.org
-version = '2.0.0'
-group = 'uk.co.omega-prime'
+version semverVersion()
+group 'uk.co.omega-prime'
 
 def projectName = 'mdbi'
 def projectDescription = 'Max\'s DataBase Interface: a simple but powerful JDBC wrapper inspired by JDBI'
