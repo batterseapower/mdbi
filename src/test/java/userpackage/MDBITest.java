@@ -436,4 +436,13 @@ public class MDBITest {
         assertArrayEquals((int[])matrix4[0], new int[] { 5 });
         assertArrayEquals((String[])matrix4[1], new String[] { "Bags" });
     }
+
+    @Test
+    public void queryLabelledMatrix() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (-1, 'Bob')"));
+
+        final Map<String, Object> matrix = MDBI.of(conn).query(sql("select id, name from person"), BatchReads.labelledMatrix(int.class, String.class));
+        assertArrayEquals(new int[] { -1 }, (int[])matrix.get("id"));
+        assertArrayEquals(new String[] { "Bob" }, (String[])matrix.get("name"));
+    }
 }
