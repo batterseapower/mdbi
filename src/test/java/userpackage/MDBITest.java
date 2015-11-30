@@ -9,14 +9,12 @@ import uk.co.omegaprime.mdbi.*;
 import java.lang.reflect.Constructor;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.Assert.*;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
@@ -358,5 +356,84 @@ public class MDBITest {
         assertEquals(2, result.size());
         assertEquals(1, result.get("id"));
         assertEquals("Moomin", result.get("name"));
+    }
+
+    @Test
+    public void queryMapViaSegmented() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Foo')"));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (2, 'Bar')"));
+
+        final Map<Integer, String> simple = MDBI.of(conn).query(sql("select id, name from person"),
+                BatchReads.asMap(int.class, String.class));
+        final Map<Integer, String> complex = MDBI.of(conn).query(sql("select id, name from person"),
+                BatchReads.asMap(Reads.useContext(int.class), BatchReads.first(String.class)));
+
+        assertEquals(simple, complex);
+    }
+
+    @Test
+    public void queryMultiMapViaSegmented() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Foo')"));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Bar')"));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (2, 'Baz')"));
+
+        final Map<Integer, List<String>> simple = MDBI.of(conn).query(sql("select id, name from person order by id"),
+                BatchReads.asMultiMap(int.class, String.class));
+        final Map<Integer, List<String>> complex = MDBI.of(conn).query(sql("select id, name from person order by id"),
+                BatchReads.asMap(Reads.useContext(int.class), BatchReads.asList(String.class)));
+
+        assertEquals(simple, complex);
+    }
+
+    @Test
+    public void queryMapFirstViaSegmented() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Foo')"));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Bar')"));
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (2, 'Baz')"));
+
+        final Map<Integer, String> simple = MDBI.of(conn).query(sql("select id, name from person order by id"),
+                BatchReads.asMapFirst(int.class, String.class));
+        final Map<Integer, String> complex = MDBI.of(conn).query(sql("select id, name from person order by id"),
+                BatchReads.asMapFirst(Reads.useContext(int.class), BatchReads.first(String.class)));
+
+        assertEquals(simple, complex);
+    }
+
+    @Test
+    public void queryMultiMapSegmentedZeroRowTrickster() throws SQLException {
+        MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Foo')"));
+
+        // I'm not 100% sure why this behaviour would be useful, but it is permitted by the interface...
+        final boolean[] skip = new boolean[] { true };
+        final Map<Integer, List<String>> result = MDBI.of(conn).query(sql("select id, name from person"),
+                BatchReads.asMultiMap(Reads.useContext(int.class), new BatchRead<String>() {
+                    @Override
+                    public String get(Read.Context ctxt, ResultSet rs) throws SQLException {
+                        if (skip[0]) {
+                            skip[0] = false;
+                            return "Bogus";
+                        } else {
+                            if (!rs.next()) throw new IllegalStateException();
+                            return rs.getString(1);
+                        }
+                    }
+                }));
+        assertEquals(new HashMap<Integer, List<String>>() {{ put(1, Arrays.asList("Bogus", "Foo")); }}, result);
+    }
+
+    @Test
+    public void queryMapMatrix() throws SQLException {
+        final Map<Integer, Object[]> partedMatrix =
+            MDBI.of(conn).query(sql("select 1, 2, 'Hello' union select 1, 3, 'World' union select 4, 5, 'Bags'"),
+                BatchReads.asMap(Reads.useContext(int.class), BatchReads.matrix(int.class, String.class)));
+        assertEquals(new HashSet<Integer>() {{ add(1); add(4); }}, partedMatrix.keySet());
+
+        final Object[] matrix1 = partedMatrix.get(1);
+        assertArrayEquals((int[])matrix1[0], new int[] { 2, 3 });
+        assertArrayEquals((String[])matrix1[1], new String[] { "Hello", "World" });
+
+        final Object[] matrix4 = partedMatrix.get(4);
+        assertArrayEquals((int[])matrix4[0], new int[] { 5 });
+        assertArrayEquals((String[])matrix4[1], new String[] { "Bags" });
     }
 }

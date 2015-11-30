@@ -1,7 +1,7 @@
 package uk.co.omegaprime.mdbi;
 
-import java.sql.*;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Functions for creating useful instances of {@link BatchRead}. */
@@ -92,11 +92,47 @@ public class BatchReads {
     /** Return the {@code ResultSet} as a map, allowing multiple values for any given key */
     @SuppressWarnings("unchecked")
     public static <K, V> BatchRead<Map<K, List<V>>> asMultiMap(Read<K> readKey, Read<V> readValue) {
-        return new MapBatchRead<>(LinkedHashMap::new, (_key, od, nw) -> {
-            if (nw.size() != 1) throw new IllegalStateException("This really shouldn't happen..");
-            od.add(nw.get(0));
-            return od;
-        }, readKey, (Read<List<V>>)(Read)Reads.map(List.class, readValue, (V v) -> new ArrayList<V>(Collections.singletonList(v))));
+        return new MapBatchRead<>(LinkedHashMap::new, BatchReads::appendListHack, readKey, (Read<List<V>>)(Read)Reads.map(List.class, readValue, (V v) -> new ArrayList<V>(Collections.singletonList(v))));
+    }
+
+    // Bit dodgy because correctness depends crucially on how we are called
+    private static <K, V> List<V> appendListHack(K key, List<V> od, List<V> nw) {
+        if (nw.size() != 1) throw new IllegalStateException("This really shouldn't happen..");
+        od.add(nw.get(0));
+        return od;
+    }
+
+    /**
+     * Splits the {@code ResultSet} into contiguous runs based on equality of the supplied key type. Reads the remaining
+     * columns in each segment using the supplied {@code BatchRead}.
+     * <p>
+     * So for example, {@code asMap(key, value)} is equivalent to {@code segmented(key, first(value)}, and {@code asMultiMap(key, value)}
+     * is equivalent to {@code segmented(key, asList(value)} in the case where the {@code ResultSet} is sorted by the key columns.
+     * <p>
+     * If a key occurs non-contiguously then {@code IllegalArgumentException} will be thrown.
+     */
+    public static <K, V> BatchRead<Map<K, V>> asMap(Read<K> readKey, BatchRead<V> readValue) {
+        return new SegmentedMapBatchRead<>(LinkedHashMap::new, BatchReads::appendFail, readKey, readValue);
+    }
+
+    /** As {@link #asMap(Read, BatchRead)} but returns the value associated with the first occurrence of a given key instead of failing. */
+    public static <K, V> BatchRead<Map<K, V>> asMapFirst(Read<K> readKey, BatchRead<V> readValue) {
+        return new SegmentedMapBatchRead<>(LinkedHashMap::new, (_key, od, _nw) -> od, readKey, readValue);
+    }
+
+    /** As {@link #asMap(Read, BatchRead)} but returns the value associated with the first occurrence of a given key instead of failing. */
+    public static <K, V> BatchRead<Map<K, V>> asMapLast(Read<K> readKey, BatchRead<V> readValue) {
+        return new SegmentedMapBatchRead<>(LinkedHashMap::new, (_key, _od, nw) -> nw, readKey, readValue);
+    }
+
+    /** As {@link #asMap(Read, BatchRead)} but returns all values associated with the a given key instead of failing. */
+    @SuppressWarnings("unchecked")
+    public static <K, V> BatchRead<Map<K, List<V>>> asMultiMap(Read<K> readKey, BatchRead<V> readValue) {
+        return new SegmentedMapBatchRead<>(LinkedHashMap::new, BatchReads::appendListHack, readKey, (BatchRead<List<V>>)(BatchRead)BatchReads.map(readValue, (V v) -> new ArrayList<V>(Collections.singletonList(v))));
+    }
+
+    public static <U, V> BatchRead<V> map(BatchRead<U> read, Function<U, V> f) {
+        return (ctxt, rs) -> f.apply(read.get(ctxt, rs));
     }
 
     /**

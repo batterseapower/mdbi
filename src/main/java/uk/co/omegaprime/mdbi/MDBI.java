@@ -47,7 +47,6 @@ public class MDBI {
     private final Supplier<Retry> retryPolicy;
 
     // TODO: support generated keys? Bit awkward because we need to know we need the feature when we prepare the stmt.
-    // FIXME: resurrect parting code
 
     /** Creates a {@code MDBI} where all queries are executed against this connection. */
     public static MDBI of(Connection connection) {

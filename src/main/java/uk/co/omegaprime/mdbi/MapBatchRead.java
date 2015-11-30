@@ -4,21 +4,16 @@ import javax.annotation.ParametersAreNonnullByDefault;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 @ParametersAreNonnullByDefault
-class MapBatchRead<K, V, MapT extends Map<K, V>> implements BatchRead<Map<K, V>> {
+class MapBatchRead<K, V, MapT extends Map<K, V>> implements BatchRead<MapT> {
     private final Supplier<? extends MapT> factory;
-    private final Appender<K, V> append;
+    private final MapEntryAppender<K, V> append;
     private final Read<K> readKey;
     private final Read<V> readValue;
 
-    public interface Appender<K, V> {
-        V append(K key, V oldValue, V newValue);
-    }
-
-    public MapBatchRead(Supplier<? extends MapT> factory, Appender<K, V> append, Read<K> readKey, Read<V> readValue) {
+    public MapBatchRead(Supplier<? extends MapT> factory, MapEntryAppender<K, V> append, Read<K> readKey, Read<V> readValue) {
         this.factory = factory;
         this.append = append;
         this.readKey = readKey;
