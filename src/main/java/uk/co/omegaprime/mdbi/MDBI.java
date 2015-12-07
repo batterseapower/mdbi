@@ -266,16 +266,7 @@ public class MDBI {
             //   select x from tab  // <-- if this deadlocks then the rollback causes the update to be lost. If we just retry this statement we'll return 1 (unexpected).
             return act.run();
         } else {
-            final Retry retry = retryPolicy.get();
-            while (true) {
-                try {
-                    return Transactionally.run(c, act);
-                } catch (RuntimeException e) {
-                    retry.consider(e);
-                } catch (SQLException e) {
-                    retry.consider(e);
-                }
-            }
+            return Transactionally.runWithRetry(c, retryPolicy.get(), act);
         }
     }
 }

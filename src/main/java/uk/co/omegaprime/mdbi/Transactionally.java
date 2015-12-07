@@ -36,15 +36,40 @@ public class Transactionally {
      * If a transaction is already in progress then the action will just be executed with no special
      * handling, essentially joining the transaction that is already in progress.
      */
-    public static <T> T run(Connection c, SQLAction<T> SQLAction) throws SQLException {
+    public static <T> T run(Connection c, SQLAction<T> action) throws SQLException {
         if (!c.getAutoCommit()) {
             // Already in transaction, join that one
-            return SQLAction.run();
+            return action.run();
         } else {
             try (TransactionHelper th = new TransactionHelper(c)) {
-                final T result = SQLAction.run();
+                final T result = action.run();
                 th.success = true;
                 return result;
+            }
+        }
+    }
+
+    /**
+     * Runs the action (which presumably performs some SQL queries) in the context of a transaction.
+     * <p>
+     * If the action throws an exception, the transaction will be retried assuming that the supplied
+     * {@link Retry} instance does not rethrow the exception.
+     *
+     * @throws IllegalArgumentException if a transaction is already in progress on the supplied connection.
+     */
+    public static <T> T runWithRetry(Connection c, Retry retry, SQLAction<T> action) throws SQLException {
+        if (!c.getAutoCommit()) {
+            throw new IllegalArgumentException("The supplied connection must be in auto-commit mode (retrying an action " +
+                                               "on a connection with an open connection probably won't do what you expect!)");
+        }
+
+        while (true) {
+            try {
+                return Transactionally.run(c, action);
+            } catch (RuntimeException e) {
+                retry.consider(e);
+            } catch (SQLException e) {
+                retry.consider(e);
             }
         }
     }

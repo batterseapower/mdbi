@@ -146,8 +146,12 @@ public final class SQL {
             //   select 1 where not (1 not in (null))
             // See also http://stackoverflow.com/questions/129077/not-in-clause-and-null-values
             //
-            // So now I rely on comparing to this random GUID instead!
-            return sql(" in ('e0afa0da0e3444d5ae3b34202b759e0c') ");
+            // Then I tried generating "in ('e0afa0da0e3444d5ae3b34202b759e0c')", where that value is just a
+            // random GUID. Unfortunately some systems (e.g. SQL Server) insist on coercing the values in the
+            // 'in' clause to the type of the LHS, which obviously fails in this case if e.g. LHS is an int.
+            //
+            // So now I use a cheeky sub-query:
+            return sql(" in (select null where 1 = 0)");
         } else {
             SQL result = f.apply(sql(" in ("), it.next());
             while (it.hasNext()) {
