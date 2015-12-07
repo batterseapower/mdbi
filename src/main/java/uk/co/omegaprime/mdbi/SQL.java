@@ -170,7 +170,7 @@ public final class SQL {
             } else if (arg instanceof Hole) {
                 result.append("${").append(((Hole)arg).object).append("}");
             } else if (arg instanceof BatchHole) {
-                result.append("$${").append(((BatchHole)arg).objects).append("}");
+                result.append("$s{").append(((BatchHole)arg).objects).append("}");
             } else {
                 throw new IllegalStateException("Unexpected arg " + arg);
             }
