@@ -102,6 +102,11 @@ public class BatchReads {
         return od;
     }
 
+    /** As {@link #asMap(Read, BatchRead)} but simply reads the key using the {@code Context}-default read instance for the class */
+    public static <K, V> BatchRead<Map<K, V>> asMap(Class<K> readKey, BatchRead<V> readValue) {
+        return asMap(Reads.useContext(readKey), readValue);
+    }
+
     /**
      * Splits the {@code ResultSet} into contiguous runs based on equality of the supplied key type. Reads the remaining
      * columns in each segment using the supplied {@code BatchRead}.
@@ -115,14 +120,29 @@ public class BatchReads {
         return new SegmentedMapBatchRead<>(LinkedHashMap::new, BatchReads::appendFail, readKey, readValue);
     }
 
+    /** As {@link #asMapFirst(Read, BatchRead)} but simply reads the key using the {@code Context}-default read instance for the class */
+    public static <K, V> BatchRead<Map<K, V>> asMapFirst(Class<K> readKey, BatchRead<V> readValue) {
+        return asMapFirst(Reads.useContext(readKey), readValue);
+    }
+
     /** As {@link #asMap(Read, BatchRead)} but returns the value associated with the first occurrence of a given key instead of failing. */
     public static <K, V> BatchRead<Map<K, V>> asMapFirst(Read<K> readKey, BatchRead<V> readValue) {
         return new SegmentedMapBatchRead<>(LinkedHashMap::new, (_key, od, _nw) -> od, readKey, readValue);
     }
 
+    /** As {@link #asMapLast(Read, BatchRead)} but simply reads the key using the {@code Context}-default read instance for the class */
+    public static <K, V> BatchRead<Map<K, V>> asMapLast(Class<K> readKey, BatchRead<V> readValue) {
+        return asMapLast(Reads.useContext(readKey), readValue);
+    }
+
     /** As {@link #asMap(Read, BatchRead)} but returns the value associated with the first occurrence of a given key instead of failing. */
     public static <K, V> BatchRead<Map<K, V>> asMapLast(Read<K> readKey, BatchRead<V> readValue) {
         return new SegmentedMapBatchRead<>(LinkedHashMap::new, (_key, _od, nw) -> nw, readKey, readValue);
+    }
+
+    /** As {@link #asMultiMap(Read, BatchRead)} but simply reads the key using the {@code Context}-default read instance for the class */
+    public static <K, V> BatchRead<Map<K, List<V>>> asMultiMap(Class<K> readKey, BatchRead<V> readValue) {
+        return asMultiMap(Reads.useContext(readKey), readValue);
     }
 
     /** As {@link #asMap(Read, BatchRead)} but returns all values associated with the a given key instead of failing. */
