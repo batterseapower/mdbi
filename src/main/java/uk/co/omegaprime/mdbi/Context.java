@@ -79,6 +79,11 @@ public class Context {
             return this;
         }
 
+        /** Convenience for registered a JavaBean for both reading and writing simultaneously */
+        public <T> Builder registerBean(Class<T> klass, String... fields) {
+            return register(klass, Writes.bean(klass, fields), Reads.bean(klass, fields));
+        }
+
         public Context build() {
             return new Context(new Reads.Map(readers), new Writes.Map(writers));
         }
