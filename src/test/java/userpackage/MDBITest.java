@@ -40,9 +40,10 @@ public class MDBITest {
     public void simple() throws SQLException {
         m.execute(sql("insert into person (id, name) values (1, 'Max')"));
         m.execute(sql("insert into person (id, name) values (2, ").$("John").sql(")"));
+        m.execute(sql("insert into person (id, name) values (2, ", MDBI.$("John"), ")"));
         Assert.assertEquals(Collections.singletonList("Max"),
                 m.queryList(sql("select name from person where id = 1"), String.class));
-        Assert.assertEquals(Collections.singletonList("John"),
+        Assert.assertEquals(Arrays.asList("John", "John"),
                 m.queryList(sql("select name from person where id = 2"), String.class));
     }
 

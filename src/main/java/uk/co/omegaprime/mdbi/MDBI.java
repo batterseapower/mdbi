@@ -1,7 +1,9 @@
 package uk.co.omegaprime.mdbi;
 
+import javax.annotation.Nullable;
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -101,15 +103,6 @@ public class MDBI {
     public Context getContext() { return context; }
     public MDBI withContext(Context context) {
         return new MDBI(context, connectionObtainer, prepared, retryPolicy);
-    }
-
-    /**
-     * Constructs a simple {@link SQL} object representing just the supplied SQL fragment.
-     * <p>
-     * For the best ergonomics, we suggest that you import this method using a static import.
-     */
-    public static SQL sql(String x) {
-        return new SQL(SnocList.singleton(x), null);
     }
 
     /** Executes a query and throws away the result, if any. */
@@ -268,5 +261,72 @@ public class MDBI {
         } else {
             return Transactionally.runWithRetry(c, retryPolicy.get(), act);
         }
+    }
+
+    // Static versions of SQL.* methods below this line:
+
+    /** See {@link SQL#$(Object)}. */
+    public static SQL $(@Nullable Object x) {
+        return sql("").$(x);
+    }
+
+    /** See {@link SQL#$(Class, T)}. */
+    public static <T> SQL $(Class<T> klass, @Nullable T x) {
+        return sql("").$(klass, x);
+    }
+
+    /** See {@link SQL#$(Write, T)}. */
+    public static <T> SQL $(Write<T> write, @Nullable T x) {
+        return sql("").$(write, x);
+    }
+
+    /** See {@link SQL#$s(Collection)}. */
+    public static <T> SQL $s(Collection<T> arg) {
+        return sql("").$s(arg);
+    }
+
+    /** See {@link SQL#$s(Class, Collection)}. */
+    public static <T> SQL $s(Class<T> klass, Collection<T> x) {
+        return sql("").$s(klass, x);
+    }
+
+    /** See {@link SQL#$s(Write, Collection)}. */
+    public static <T> SQL $s(Write<T> write, Collection<T> x) {
+        return sql("").$s(write, x);
+    }
+
+    /**
+     * Constructs a simple {@link SQL} object representing just the supplied SQL fragment. See {@link SQL#sql(String)}.
+     * <p>
+     * For the best ergonomics, we suggest that you import this method using a static import.
+     */
+    public static SQL sql(String x) {
+        return new SQL(SnocList.singleton(x), null);
+    }
+
+    /** See {@link SQL#sql(Object...)}. */
+    public static SQL sql(Object... bits) {
+        return sql("").sql(bits);
+    }
+
+    /** See {@link SQL#in(T...)}. */
+    @SafeVarargs
+    public static <T> SQL in(T... xs) {
+        return sql("").in(xs);
+    }
+
+    /** See {@link SQL#in(Iterable)}. */
+    public static <T> SQL in(Iterable<T> xs) {
+        return sql("").in(xs);
+    }
+
+    /** See {@link SQL#in(Class, Iterable)}. */
+    public static <T> SQL in(Class<T> klass, Iterable<T> xs) {
+        return sql("").in(klass, xs);
+    }
+
+    /** See {@link SQL#in(Write, Iterable)}. */
+    public static <T> SQL in(Write<T> write, Iterable<T> xs) {
+        return sql("").in(write, xs);
     }
 }

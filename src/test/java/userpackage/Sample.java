@@ -5,6 +5,7 @@ import uk.co.omegaprime.mdbi.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,7 @@ public class Sample {
         // Most people who work with JDBC have been burned at some point by the fact that it silently
         // turns NULLs in the database into zeroes, which is almost never what you want. MDBI removes
         // this misfeature, so the following query actually throws a NullPointerException:
-        //MDBI.of(conn).queryFirst(sql("select null"), int.class);
+        MDBI.of(conn).queryFirst(sql("select null"), int.class);
 
         // Of course, you can still retrieve nulls if you explicitly ask for them:
         final Integer nully = MDBI.of(conn).queryFirst(sql("select null"), Integer.class);

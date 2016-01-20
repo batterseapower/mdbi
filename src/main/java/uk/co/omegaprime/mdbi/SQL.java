@@ -109,6 +109,32 @@ public final class SQL {
         return sql(MDBI.sql(x));
     }
 
+    /**
+     * Appends several bits of SQL.
+     * <p>
+     * The arguments must either be {@code SQL} instances, or Strings (in which case they will be
+     * assumed to represent SQL fragments, rather than string parameters to the query).
+     */
+    public SQL sql(Object... xs) {
+        SQL result = sql("");
+        for (int i = 0; i < xs.length; i++) {
+            final Object x = xs[i];
+            if (x == null) {
+                throw new NullPointerException("The argument at index " + i + " was null");
+            }
+
+            if (x instanceof String) {
+                result = result.sql((String)x);
+            } else if (x instanceof SQL) {
+                result = result.sql((SQL)x);
+            } else {
+                throw new IllegalArgumentException("Supplied argument " + x + " at index " + i + " is neither a String nor a SQL instance");
+            }
+        }
+
+        return result;
+    }
+
     /** Append a SQL literal */
     @SafeVarargs
     public final <T> SQL in(T... xs) {
@@ -126,12 +152,12 @@ public final class SQL {
     }
 
     /** Append an &quot;IN&quot; clause based on the supplied collection, turning objects into SQL using the {@link Write} instance for the supplied class. */
-    public final <T> SQL in(Class<T> klass, Iterable<T> xs) {
+    public <T> SQL in(Class<T> klass, Iterable<T> xs) {
         return in(Writes.useContext(klass), xs);
     }
 
     /** Append an &quot;IN&quot; clause based on the supplied collection, turning objects into SQL using the supplied {@link Write} instance. */
-    public final <T> SQL in(Write<T> write, Iterable<T> xs) {
+    public <T> SQL in(Write<T> write, Iterable<T> xs) {
         return inCore(xs, (sql, x) -> sql.$(write, x));
     }
 
