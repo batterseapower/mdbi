@@ -270,12 +270,12 @@ public class MDBI {
         return sql("").$(x);
     }
 
-    /** See {@link SQL#$(Class, T)}. */
+    /** See {@link SQL#$(Class, Object)}. */
     public static <T> SQL $(Class<T> klass, @Nullable T x) {
         return sql("").$(klass, x);
     }
 
-    /** See {@link SQL#$(Write, T)}. */
+    /** See {@link SQL#$(Write, Object)}. */
     public static <T> SQL $(Write<T> write, @Nullable T x) {
         return sql("").$(write, x);
     }
@@ -309,9 +309,9 @@ public class MDBI {
         return sql("").sql(bits);
     }
 
-    /** See {@link SQL#in(T...)}. */
+    /** See {@link SQL#in(Object...)}. */
     @SafeVarargs
-    public static <T> SQL in(T... xs) {
+    public static <T> SQL in(Object... xs) {
         return sql("").in(xs);
     }
 
