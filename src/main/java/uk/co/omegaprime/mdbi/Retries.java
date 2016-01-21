@@ -11,12 +11,12 @@ public class Retries {
         return new RetryNothing();
     }
 
-    /** Retry exceptions that seem to be caused by deadlocks up to 5 times, backing off for 100ms extra each time */
+    /** Retry exceptions that seem to be caused by deadlocks using a reasonable default backoff strategy */
     public static Retry deadlocks() {
         return new RetryDeadlocks();
     }
 
-    /** Retry exceptions that seem to be caused by deadlocks using the supplied retry count and linear backoff period */
+    /** Retry exceptions that seem to be caused by deadlocks using up to the given number of times, using the supplied initial backoff period */
     public static Retry deadlocks(int maxRetries, int backoffInterval, TimeUnit backoffIntervalUnit) {
         return new RetryDeadlocks(maxRetries, backoffInterval, backoffIntervalUnit);
     }
