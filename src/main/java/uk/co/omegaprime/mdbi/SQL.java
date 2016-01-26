@@ -1,7 +1,10 @@
 package uk.co.omegaprime.mdbi;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.function.BiFunction;
 
@@ -187,21 +190,114 @@ public final class SQL {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public String toString() {
-        final StringBuilder result = new StringBuilder();
+        boolean isBatch = false;
         for (Object arg : args) {
-            if (arg instanceof String) {
-                result.append((String)arg);
-            } else if (arg instanceof Hole) {
-                result.append("${").append(((Hole)arg).object).append("}");
-            } else if (arg instanceof BatchHole) {
-                result.append("$s{").append(((BatchHole)arg).objects).append("}");
-            } else {
-                throw new IllegalStateException("Unexpected arg " + arg);
+            if (arg instanceof BatchHole) {
+                isBatch = true;
+                break;
             }
         }
 
-        return result.toString();
+        // We try to be a bit clever to make things easier for the humans looking at SQL objects: we show holes using
+        // the proper SQL interpretation if possible. If this fails for whatever reason we splice them in using a made-up syntax.
+        final Write.Context tolerantWriteContext = new Write.Context() {
+            @Override
+            public <T> Write<? super T> get(Class<T> klass) {
+                Write<? super T> unbound_ = null;
+                try {
+                    unbound_ = Context.DEFAULT.writeContext().get(klass);
+                } catch (Exception _ignored) {
+                    // Will just fallback on default printing method
+                }
+
+                final Write<? super T> unbound = unbound_;
+                return ctxt -> {
+                    BoundWrite<? super T> bound_ = null;
+                    if (unbound != null) {
+                        try {
+                            bound_ = unbound.bind(ctxt);
+                        } catch (Exception _ignored) {
+                            // Will just fallback on default printing method
+                        }
+                    }
+
+                    final BoundWrite<? super T> bound = bound_;
+                    return new BoundWrite<T>() {
+                        private Integer reportedArity;
+
+                        @Override
+                        public int arity() {
+                            if (reportedArity == null) {
+                                if (bound != null) {
+                                    try {
+                                        reportedArity = bound.arity();
+                                    } catch (Exception _ignored) {
+                                        // Will just fallback on default printing method
+                                    }
+                                }
+
+                                if (reportedArity == null) {
+                                    reportedArity = 1;
+                                }
+                            }
+
+                            return reportedArity;
+                        }
+
+                        @Override
+                        public void set(@Nonnull PreparedStatement s, @Nonnull IndexRef ix, @Nullable T x) throws SQLException {
+                            throw new UnsupportedOperationException("This code should be unreachable");
+                        }
+
+                        @Nonnull
+                        @Override
+                        public List<String> asSQL(@Nullable T x) {
+                            List<String> result = null;
+                            if (bound != null) {
+                                try {
+                                    result = bound.asSQL(x);
+                                } catch (Exception _ignored) {
+                                    // Will just fallback on default printing method for this param
+                                }
+                            }
+
+                            if (result != null && (reportedArity == null || reportedArity == result.size())) {
+                                // Common case
+                                return result;
+                            } else {
+                                final int needArity = reportedArity == null ? 1 : reportedArity;
+                                final List<String> modifiedResult = new ArrayList<>();
+                                int i = 0;
+                                while (modifiedResult.size() < needArity) {
+                                    if (result != null && i < result.size()) {
+                                        modifiedResult.add(result.get(i++));
+                                    } else {
+                                        modifiedResult.add("${" + x + (needArity == 1 ? "" : ":" + modifiedResult.size()) + "}");
+                                    }
+                                }
+
+                                return modifiedResult;
+                            }
+                        }
+                    };
+                };
+            }
+        };
+
+        if (isBatch) {
+            final StringBuilder result = new StringBuilder();
+            final Iterator<String> it = BatchUnpreparedSQLBuilder.build(this, tolerantWriteContext).getValue();
+            while (it.hasNext()) {
+                if (result.length() != 0) result.append("\n");
+                result.append(it.next());
+            }
+
+            return result.toString();
+        } else {
+            return BespokeUnpreparedSQLBuilder.build(this, tolerantWriteContext);
+        }
     }
 }

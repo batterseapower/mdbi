@@ -446,4 +446,28 @@ public class MDBITest {
         assertArrayEquals(new int[] { -1 }, (int[])matrix.get("id"));
         assertArrayEquals(new String[] { "Bob" }, (String[])matrix.get("name"));
     }
+
+    private static class StringyType {
+        @Override
+        public String toString() {
+            return "StringyType";
+        }
+    }
+
+    @Test
+    public void helpfulToString() {
+        assertEquals("select 1 from foo where x = 1 and y = 'Brendan'",
+                     sql("select 1 from foo where x = ").$(1).sql(" and y = ").$("Brendan").toString());
+
+        assertEquals("select 1 from foo where x = 1 and y = ${StringyType}",
+                     sql("select 1 from foo where x = ").$(1).sql(" and y = ").$(new StringyType()).toString());
+
+        assertEquals("select 1 from foo where x = 1 and y = 'Brendan'\n" +
+                     "select 1 from foo where x = 1 and y = 'John'",
+                     sql("select 1 from foo where x = ").$(1).sql(" and y = ").$s(Arrays.asList("Brendan", "John")).toString());
+
+        assertEquals("select 1 from foo where x = 1 and y = ${StringyType}\n" +
+                        "select 1 from foo where x = 1 and y = ${StringyType}",
+                sql("select 1 from foo where x = ").$(1).sql(" and y = ").$s(Arrays.asList(new StringyType(), new StringyType())).toString());
+    }
 }
