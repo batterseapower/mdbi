@@ -1,6 +1,7 @@
 package uk.co.omegaprime.mdbi;
 
 import javax.annotation.Nonnull;
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -170,6 +171,9 @@ public class Reads {
     };
     public static final Read<byte[]> BYTE_ARRAY = new AbstractUnaryRead<byte[]>(byte[].class) {
         @Override protected byte[] get(ResultSet rs, int ix) throws SQLException { return rs.getBytes(ix); }
+    };
+    public static final Read<BigDecimal> BIG_DECIMAL = new AbstractUnaryRead<BigDecimal>(BigDecimal.class) {
+        @Override protected BigDecimal get(ResultSet rs, int ix) throws SQLException { return rs.getBigDecimal(ix); }
     };
 
     /** A {@code Read} instance that simply defers to the {@link Context} to decide how to construct an instance of the given class. */

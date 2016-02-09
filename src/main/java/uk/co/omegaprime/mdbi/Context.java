@@ -1,5 +1,6 @@
 package uk.co.omegaprime.mdbi;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -48,6 +49,7 @@ public class Context {
             context.register(LocalTime.class,     Writes.LOCAL_TIME,      Reads.LOCAL_TIME);
             context.register(LocalDateTime.class, Writes.LOCAL_DATE_TIME, Reads.LOCAL_DATE_TIME);
             context.register(byte[].class,        Writes.BYTE_ARRAY,      Reads.BYTE_ARRAY);
+            context.register(BigDecimal.class,    Writes.BIG_DECIMAL,     Reads.BIG_DECIMAL);
             return context;
         }
 

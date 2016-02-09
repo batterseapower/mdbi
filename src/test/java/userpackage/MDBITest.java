@@ -7,6 +7,7 @@ import org.junit.Test;
 import uk.co.omegaprime.mdbi.*;
 
 import java.lang.reflect.Constructor;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -47,7 +48,8 @@ public class MDBITest {
                 m.queryList(sql("select name from person where id = 2"), String.class));
     }
 
-    public static class Row {
+    // Intentionally private to check that MDBI can still invoke the constructor via reflection
+    private static class Row {
         public final int id;
         public final String name;
 
@@ -258,6 +260,19 @@ public class MDBITest {
     public void doubles() throws SQLException {
         assertDoublesWork(false);
         assertDoublesWork(true);
+    }
+
+    private void assertBigDecimalsWork(boolean prepared) throws SQLException {
+        Assert.assertEquals(new BigDecimal(12345678), m.withPrepared(prepared).queryFirst(sql("select ").$(new BigDecimal(12345678)), BigDecimal.class));
+        Assert.assertEquals(new BigDecimal("1234.5678"), m.withPrepared(prepared).queryFirst(sql("select ").$(new BigDecimal("1234.5678")), BigDecimal.class));
+        Assert.assertEquals(new BigDecimal("0.123456789"), m.withPrepared(prepared).queryFirst(sql("select ").$(new BigDecimal("0.123456789")), BigDecimal.class));
+        assertNull(m.withPrepared(prepared).queryFirst(sql("select ").$(null), BigDecimal.class));
+    }
+
+    @Test
+    public void bigDecimals() throws SQLException {
+        assertBigDecimalsWork(false);
+        assertBigDecimalsWork(true);
     }
 
     public static class Bean {

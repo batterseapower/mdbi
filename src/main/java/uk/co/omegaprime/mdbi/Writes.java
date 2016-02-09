@@ -3,6 +3,7 @@ package uk.co.omegaprime.mdbi;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -201,6 +202,10 @@ public class Writes {
         void set(PreparedStatement s, int ix, @Nullable byte[] x) throws SQLException {
             s.setBytes(ix, x);
         }
+    };
+    public static final Write<BigDecimal> BIG_DECIMAL = new AbstractUnaryWrite<BigDecimal>() {
+        @Override public String asSQL(@Nullable BigDecimal x) { return x == null ? "null" : x.toPlainString(); }
+        @Override public void set(PreparedStatement s, int ix, @Nullable BigDecimal x) throws SQLException { s.setBigDecimal(ix, x); }
     };
 
     /** A {@code Write} instance that simply defers to the {@link Context} to decide how to turn instances of the given class into SQL. */
