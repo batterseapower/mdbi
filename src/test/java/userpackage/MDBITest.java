@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
@@ -358,7 +359,7 @@ public class MDBITest {
         final Write<List<Object>> write = Writes.listWithClasses(Arrays.<Class<?>>asList(Integer.class, String.class));
         MDBI.of(conn).execute(sql("insert into person (id, name) values (").$(write, Arrays.asList(1, "Moomin")).sql(")"));
 
-        final Read<List<Object>> read = Reads.listWithClasses(Arrays.asList(Integer.class, String.class));
+        final Read<List<Object>> read = Reads.listWithClasses(Arrays.<Class<?>>asList(Integer.class, String.class));
         final List<Object> result = MDBI.of(conn).queryFirst(sql("select id, name from person where name = 'Moomin'"), read);
         assertEquals(result, Arrays.asList(1, "Moomin"));
     }
@@ -367,7 +368,7 @@ public class MDBITest {
     public void readLabelledMap() throws SQLException {
         MDBI.of(conn).execute(sql("insert into person (id, name) values (1, 'Moomin')"));
 
-        final Read<Map<String, Object>> read = Reads.labelledMapWithClasses(Arrays.asList(Integer.class, String.class));
+        final Read<Map<String, Object>> read = Reads.labelledMapWithClasses(Arrays.<Class<?>>asList(Integer.class, String.class));
         final Map<String, Object> result = MDBI.of(conn).queryFirst(sql("select id, name from person where name = 'Moomin'"), read);
         assertEquals(2, result.size());
         assertEquals(1, result.get("id"));
@@ -484,5 +485,21 @@ public class MDBITest {
         assertEquals("select 1 from foo where x = 1 and y = ${StringyType}\n" +
                         "select 1 from foo where x = 1 and y = ${StringyType}",
                 sql("select 1 from foo where x = ").$(1).sql(" and y = ").$s(Arrays.asList(new StringyType(), new StringyType())).toString());
+    }
+
+    @Test
+    public void matrixBatchReadBuilderTest() throws SQLException {
+        final MatrixBatchReadBuilder mrb = MatrixBatchReadBuilder.create();
+        final Supplier<int[]> ids = mrb.addInt(sql("id"));
+        final Supplier<String[]> names = mrb.add(sql("name"), String.class);
+
+        m.execute(sql("insert into person (id, name) values (1, 'Max')"));
+        m.execute(sql("insert into person (id, name) values (2, 'John')"));
+
+        final int n = mrb.buildAndExecute(m, columns -> sql("select ", columns, " from person order by id"));
+        assertEquals(2, n);
+
+        assertArrayEquals(new int[] { 1, 2 }, ids.get());
+        assertArrayEquals(new String[] { "Max", "John" }, names.get());
     }
 }
