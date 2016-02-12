@@ -191,9 +191,19 @@ public class Reads {
         return tuple(klass, klasses.stream().map(argklass -> new ContextRead<>(argklass)).collect(Collectors.toList()));
     }
 
+    /** Variadic version of {@link #tupleWithFieldClasses(Class, Collection)} */
+    public static <T> Read<T> tupleWithFieldClasses(Class<T> klass, Class<?>... klasses) {
+        return tupleWithFieldClasses(klass, Arrays.asList(klasses));
+    }
+
     /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the supplied {@code Read} instances. */
     public static <T> Read<T> tuple(Class<T> klass, Collection<Read<?>> reads) {
         return new TupleRead<T>(klass, reads);
+    }
+
+    /** Variadic version of {@link #tuple(Class, Collection)} */
+    public static <T> Read<T> tuple(Class<T> klass, Read<?>... reads) {
+        return tuple(klass, Arrays.asList(reads));
     }
 
     /** Mapping treating {@code Read} as a functor. */
@@ -308,6 +318,12 @@ public class Reads {
         return list(klasses.stream().map(klass -> new ContextRead<>(klass)).collect(Collectors.toList()));
     }
 
+    /** Variadic version of {@link #listWithClasses(Collection)} */
+    @SafeVarargs
+    public static <T> Read<List<T>> listWithClasses(Class<? extends T>... klasses) {
+        return listWithClasses(Arrays.asList(klasses));
+    }
+
     /** Reads the given elements one after another, aggregating the results from the row into a {@code List} */
     public static <T> Read<List<T>> list(Collection<Read<? extends T>> reads) {
         return new Read<List<T>>() {
@@ -340,9 +356,21 @@ public class Reads {
         };
     }
 
+    /** Variadic version of {@link #list(Collection)} */
+    @SafeVarargs
+    public static <T> Read<List<T>> list(Read<? extends T>... reads) {
+        return list(Arrays.asList(reads));
+    }
+
     /** As {@link #labelledMap(Collection)}, but using the {@code Read} instance associated with the class in the {@link Context}. */
     public static <T> Read<java.util.Map<String, T>> labelledMapWithClasses(Collection<Class<? extends T>> klasses) {
         return labelledMap(klasses.stream().map(klass -> new ContextRead<>(klass)).collect(Collectors.toList()));
+    }
+
+    /** Variadic version of {@link #labelledMapWithClasses(Collection)} */
+    @SafeVarargs
+    public static <T> Read<java.util.Map<String, T>> labelledMapWithClasses(Class<? extends T>... klasses) {
+        return labelledMapWithClasses(Arrays.asList(klasses));
     }
 
     /**
@@ -387,5 +415,11 @@ public class Reads {
                 };
             }
         };
+    }
+
+    /** Variadic version of {@link #labelledMap(Collection)} */
+    @SafeVarargs
+    public static <T> Read<java.util.Map<String, T>> labelledMap(Read<? extends T>... reads) {
+        return labelledMap(Arrays.asList(reads));
     }
 }

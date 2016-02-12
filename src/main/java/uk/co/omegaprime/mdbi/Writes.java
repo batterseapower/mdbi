@@ -274,6 +274,12 @@ public class Writes {
         return list(klasses.stream().map(klass -> new ContextWrite<>(klass)).collect(Collectors.toList()));
     }
 
+    /** Variadic version of {@link #listWithClasses(Collection)} */
+    @SafeVarargs
+    public static <T> Write<List<T>> listWithClasses(Class<? extends T>... klasses) {
+        return listWithClasses(Arrays.asList(klasses));
+    }
+
     /** Writes a fixed number of elements into the result */
     public static <T> Write<List<T>> list(Collection<Write<? extends T>> writes) {
         return ctxt -> {
@@ -310,6 +316,12 @@ public class Writes {
                 }
             };
         };
+    }
+
+    /** Variadic version of {@link #list(Collection)} */
+    @SafeVarargs
+    public static <T> Write<List<T>> list(Write<? extends T>... writes) {
+        return list(Arrays.asList(writes));
     }
 
     private Writes() {}
