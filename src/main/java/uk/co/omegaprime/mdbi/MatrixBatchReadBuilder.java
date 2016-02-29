@@ -33,7 +33,7 @@ public class MatrixBatchReadBuilder {
         @Override
         public T get() {
             if (value == null) {
-                throw new IllegalStateException("You must complete the corresponding MatrixBatchReadBuilder before invoking a Supplier that it returns");
+                throw new IllegalStateException("You must bindSuppliers on the corresponding MatrixBatchReadBuilder before invoking a Supplier that it returns");
             }
 
             return value;
@@ -46,16 +46,14 @@ public class MatrixBatchReadBuilder {
 
     /** A convenience that builds the SQL query and executes it with an appropriate reader all in one go. Returns the row count. */
     public int buildAndExecute(MDBI mdbi, Function<SQL, SQL> mkSelect) throws SQLException {
-        return complete(mdbi.query(mkSelect.apply(buildColumns()), build()));
+        return bindSuppliers(mdbi.query(mkSelect.apply(buildColumns()), build()));
     }
 
-    /** Use the supplied matrix to complete all the {@code Supplier} objects that we have returned. Returns the row count. */
+    /** Use the supplied matrix to bind all the {@code Supplier} objects that we have returned. Returns the row count. */
     @SuppressWarnings("unchecked")
-    public int complete(Object[] matrix) {
-        if (suppliers.get(0).value != null) {
-            throw new IllegalStateException("You may only complete each MatrixBatchReadBuilder once");
-        }
-
+    public int bindSuppliers(Object[] matrix) {
+        // For now I'm intentionally going to allow this to be completed > 1 time, just in case anyone
+        // wants to use this in a scenario where there is > 1 matrix returned from a particular query
         for (int i = 0; i < matrix.length; i++) {
             ((CompletableSupplier<Object>)suppliers.get(i)).value = matrix[i];
         }
@@ -65,14 +63,7 @@ public class MatrixBatchReadBuilder {
 
     /** Returns comma delimited column list */
     public SQL buildColumns() {
-        if (columns.isEmpty()) throw new IllegalStateException("You must add at least one column");
-
-        SQL result = columns.get(0);
-        for (int i = 1; i < columns.size(); i++) {
-            result = result.sql(", ").sql(columns.get(i));
-        }
-
-        return result;
+        return SQL.commaSeparate(columns.iterator());
     }
 
     /** Returns how to interpret a {@code ResultSet} as a matrix */

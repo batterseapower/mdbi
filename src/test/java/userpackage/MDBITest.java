@@ -6,7 +6,6 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.omegaprime.mdbi.*;
 
-import java.lang.reflect.Constructor;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
@@ -501,5 +501,26 @@ public class MDBITest {
 
         assertArrayEquals(new int[] { 1, 2 }, ids.get());
         assertArrayEquals(new String[] { "Max", "John" }, names.get());
+    }
+
+    @Test
+    public void rowReadBuilderTest() throws SQLException {
+        final RowReadBuilder lrb = RowReadBuilder.create();
+        final IntSupplier id = lrb.addInt(sql("id"));
+        final Supplier<String> name = lrb.add(sql("name"), String.class);
+
+        m.execute(sql("insert into person (id, name) values (1, 'Max')"));
+        m.execute(sql("insert into person (id, name) values (2, 'John')"));
+
+        final List<List<Object>> rows = m.queryList(sql("select ", lrb.buildColumns(), " from person order by id"), lrb.build());
+        assertEquals(2, rows.size());
+
+        lrb.bindSuppliers(rows.get(0));
+        assertEquals(1, id.getAsInt());
+        assertEquals("Max", name.get());
+
+        lrb.bindSuppliers(rows.get(1));
+        assertEquals(2, id.getAsInt());
+        assertEquals("John", name.get());
     }
 }

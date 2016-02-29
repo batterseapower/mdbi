@@ -190,6 +190,17 @@ public final class SQL {
         }
     }
 
+    static SQL commaSeparate(Iterator<SQL> it) {
+        if (!it.hasNext()) throw new IllegalStateException("You must add at least one column");
+
+        SQL result = it.next();
+        while (it.hasNext()) {
+            result = result.sql(", ").sql(it.next());
+        }
+
+        return result;
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public String toString() {
