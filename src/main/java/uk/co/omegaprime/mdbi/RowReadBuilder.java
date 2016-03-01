@@ -1,9 +1,24 @@
 package uk.co.omegaprime.mdbi;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.*;
 
+/**
+ * A convenience wrapper around the {@link Reads#list(Collection)} functionality that avoids you having to track column indexes.
+ * <p>
+ * <pre>
+ * RowReadBuilder rrb = RowReadBuilder.create();
+ * Supplier&lt;String&gt; names = rrb.add(sql("name"), String.class);
+ * IntSupplier ages = rrb.addInt(sql("age"));
+ *
+ * for (List&lt;Object&gt; row : mdbi.queryList(sql("select ", columns, " from people"), rrb.build())) {
+ *     rrb.bindSuppliers(row);
+ *     System.out.println("Hello " + names.get() + " of age " + ages.get());
+ * }
+ * </pre>
+ */
 public class RowReadBuilder {
     private final List<SQL> columns = new ArrayList<>();
     private final List<Read<?>> reads = new ArrayList<>();

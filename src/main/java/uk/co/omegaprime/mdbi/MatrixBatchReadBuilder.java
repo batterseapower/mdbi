@@ -17,7 +17,7 @@ import java.util.function.Supplier;
  *
  * int n = mrb.buildAndExecute(mdbi, columns -> sql("select ", columns, " from people"));
  *
- * for (int i = 0; i < n; i++) {
+ * for (int i = 0; i &lt; n; i++) {
  *     System.out.println("Hello " + names[i] + " of age " + ages[i]);
  * }
  * </pre>
