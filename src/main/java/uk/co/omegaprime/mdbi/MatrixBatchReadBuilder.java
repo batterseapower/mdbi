@@ -15,9 +15,9 @@ import java.util.function.Supplier;
  * Supplier&lt;String[]&gt; names = mrb.add(sql("name"), String.class);
  * Supplier&lt;int[]&gt; ages = mrb.addInt(sql("age"));
  *
- * int n = mrb.buildAndExecute(mdbi, columns -> sql("select ", columns, " from people"));
+ * int n = mrb.buildAndExecute(mdbi, columns -&gt; sql("select ", columns, " from people"));
  *
- * for (int i = 0; i < n; i++) {
+ * for (int i = 0; i &lt; n; i++) {
  *     System.out.println("Hello " + names[i] + " of age " + ages[i]);
  * }
  * </pre>
