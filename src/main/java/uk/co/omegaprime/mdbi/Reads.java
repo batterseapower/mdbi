@@ -1,6 +1,8 @@
 package uk.co.omegaprime.mdbi;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -206,6 +208,24 @@ public class Reads {
         return tuple(klass, Arrays.asList(reads));
     }
 
+    /**
+     * Generalized version of {@link #tuple(Class)} that lets you run an arbitrary function rather than specifically just a constructor
+     * <p>
+     * The object you supply is intended to be an instance of a class with exactly one public instance method (probably an anonymous inner class).
+     * A typical usecase is illustrated by the following test:
+     * <p>
+     * <pre>
+     * m.execute(sql("insert into person (id, name) values (3, 'John')"));
+     *
+     * assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.usingFunction(new Object() {
+     *     public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
+     * })));
+     * </pre>
+     */
+    public static Read<?> usingFunction(Object fun) {
+        return new FunctionRead(fun);
+    }
+
     /** Mapping treating {@code Read} as a functor. */
     public static <T, U> Read<U> map(Class<U> klass, Class<T> readKlass, Function<T, U> f) {
         return map(klass, new ContextRead<>(readKlass), f);
@@ -239,10 +259,12 @@ public class Reads {
 
     private Reads() {}
 
+    /** Constructs an enum by interpreting the value from the database as the name of a enum constant */
     public static <T extends Enum<T>> Read<T> enumAsString(Class<T> klass) {
         return map(klass, Reads.STRING, x -> x == null ? null : Enum.valueOf(klass, x));
     }
 
+    /** Constructs an enum by interpreting the value from the database as the ordinal of a enum constant */
     public static <T extends Enum<T>> Read<T> enumAsOrdinal(Class<T> klass) {
         final T[] constants = klass.getEnumConstants();
         return map(klass, Reads.INTEGER, x -> x == null ? null : constants[x]);

@@ -8,7 +8,7 @@ package uk.co.omegaprime.mdbi;
  */
 public interface Read<T> {
     /** Runtime representation of the {@code Read} type parameter: useful for constructing arrays */
-    Class<T> getElementClass();
+    Class<? extends T> getElementClass();
 
     BoundRead<? extends T> bind(Context ctxt);
 

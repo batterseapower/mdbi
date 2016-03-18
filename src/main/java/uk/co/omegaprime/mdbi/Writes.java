@@ -326,10 +326,12 @@ public class Writes {
 
     private Writes() {}
 
+    /** Writes the name of the enum constant into the database */
     public static <T extends Enum<T>> Write<T> enumAsString() {
         return map(Writes.STRING, x -> x == null ? null : x.name());
     }
 
+    /** Writes the ordinal of the enum constant into the database */
     public static <T extends Enum<T>> Write<T> enumAsOrdinal() {
         return map(Writes.INTEGER, x -> x == null ? null : x.ordinal());
     }
