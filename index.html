@@ -23,7 +23,7 @@
 
     <section class="main-content">
       <h3>
-<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+<a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Java database access has never been easier.</h3>
 
 <p><a href="https://en.wikipedia.org/wiki/Java_Database_Connectivity">Java Database Connectivity (JDBC)</a> is inescapable if you want to talk to a SQL database from Java. Unfortanately, JDBC is an API that is absolutely no fun to use!</p>
 
@@ -144,6 +144,16 @@ final int[] ageColumn = (int[])matrix[1];
 println(nameColumn[0] + ": " + ageColumn[1]); // Bar: 13
 </code></pre>
 
+<p>Alternatively, that can be written as:</p>
+
+<pre><code>final MatrixBatchReadBuilder mrb = MatrixBatchReadBuilder.create();
+final Supplier<String[]> names = mrb.add(sql("name"), String.class);
+final Supplier<int[]> ages = mrb.addInt(sql("int"));
+mrb.buildAndExecute(MDBI.of(conn), columns ->
+    sql("select ", columns, " from people order by name"));
+println(names.get()[0] + ": " + ages.get()[1]); // Bar: 13
+</code></pre>
+
 <h3>
 <a id="custom-type-mapping" class="anchor" href="#custom-type-mapping" aria-hidden="true"><span class="octicon octicon-link"></span></a>Custom type mapping</h3>
 
@@ -172,7 +182,7 @@ example, if we have defined a <code>Person</code> type as follows:</p>
 }
 </code></pre>
 
-<p>Then we can read this back from the database as follows:</p>
+<p>Then we can read this back from the database like so:</p>
 
 <pre><code>final Context ctxt1 = Context.Builder.createDefault()
         .registerRead(Person.class, Reads.tuple(Person.class))
@@ -180,6 +190,20 @@ example, if we have defined a <code>Person</code> type as follows:</p>
 final Person person = MDBI.of(ctxt1, conn).queryFirst(
                         sql("select name, age from people order by name"), Person.class);
 println(person.name); // Bar
+</code></pre>
+
+<p>Or even skip the <code>Context</code> entirely:</p>
+<pre><code>MDBI.of(ctxt1, conn).queryFirst(
+      sql("select name, age from people order by name"), Reads.tuple(Person.class));
+</code></pre>
+
+<p>Or perhaps even get a <code>Person</code> by running something other than a constructor:</p>
+<pre><code>final Person person = MDBI.of(ctxt1, conn).queryFirst(
+    sql("select name, age from people order by name"),
+    Reads.ofFunction(new Object() {
+        public f(String name, int age) { return new Person(name, -age); }      
+    }));
+println(person.age); // -13
 </code></pre>
 
 <p>We've shown how you can read your custom types back from the database, but custom types are also usable when you are
