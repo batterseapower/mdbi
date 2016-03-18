@@ -326,6 +326,14 @@ public class Writes {
 
     private Writes() {}
 
+    public static <T extends Enum<T>> Write<T> enumAsString() {
+        return map(Writes.STRING, x -> x == null ? null : x.name());
+    }
+
+    public static <T extends Enum<T>> Write<T> enumAsOrdinal() {
+        return map(Writes.INTEGER, x -> x == null ? null : x.ordinal());
+    }
+
     private static abstract class AbstractUnaryWrite<T> implements Write<T> {
         abstract String asSQL(@Nullable T x);
         abstract void set(PreparedStatement s, int ix, @Nullable T x) throws SQLException;

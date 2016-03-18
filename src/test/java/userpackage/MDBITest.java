@@ -19,6 +19,7 @@ import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
+import static uk.co.omegaprime.mdbi.MDBI.$;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
 
 public class MDBITest {
@@ -42,7 +43,7 @@ public class MDBITest {
     public void simple() throws SQLException {
         m.execute(sql("insert into person (id, name) values (1, 'Max')"));
         m.execute(sql("insert into person (id, name) values (2, ").$("John").sql(")"));
-        m.execute(sql("insert into person (id, name) values (2, ", MDBI.$("John"), ")"));
+        m.execute(sql("insert into person (id, name) values (2, ", $("John"), ")"));
         Assert.assertEquals(Collections.singletonList("Max"),
                 m.queryList(sql("select name from person where id = 1"), String.class));
         Assert.assertEquals(Arrays.asList("John", "John"),
@@ -522,5 +523,20 @@ public class MDBITest {
         lrb.bindSuppliers(rows.get(1));
         assertEquals(2, id.getAsInt());
         assertEquals("John", name.get());
+    }
+
+    private enum Person { ENUM_PERSON_1, ENUM_PERSON_2 }
+
+    @Test
+    public void enumAsString() throws SQLException {
+        m.execute(sql("insert into person (id, name) values (1, ", $(Writes.enumAsString(), Person.ENUM_PERSON_1), ")"));
+        assertEquals(Person.ENUM_PERSON_1, m.queryFirst(sql("select name from person"), Reads.enumAsString(Person.class)));
+    }
+
+    @Test
+    public void enumAsOrdinal() throws SQLException {
+        m.execute(sql("insert into person (name, id) values ('Max', ", $(Writes.enumAsOrdinal(), Person.ENUM_PERSON_2), ")"));
+        assertEquals(Integer.valueOf(1), m.queryFirst(sql("select id from person"), Reads.INTEGER));
+        assertEquals(Person.ENUM_PERSON_2, m.queryFirst(sql("select id from person"), Reads.enumAsOrdinal(Person.class)));
     }
 }

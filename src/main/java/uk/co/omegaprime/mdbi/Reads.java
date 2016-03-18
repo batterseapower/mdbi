@@ -239,6 +239,15 @@ public class Reads {
 
     private Reads() {}
 
+    public static <T extends Enum<T>> Read<T> enumAsString(Class<T> klass) {
+        return map(klass, Reads.STRING, x -> x == null ? null : Enum.valueOf(klass, x));
+    }
+
+    public static <T extends Enum<T>> Read<T> enumAsOrdinal(Class<T> klass) {
+        final T[] constants = klass.getEnumConstants();
+        return map(klass, Reads.INTEGER, x -> x == null ? null : constants[x]);
+    }
+
     static class Map implements Read.Context {
         private final HashMap<Class<?>, Read<?>> map = new HashMap<>();
 
