@@ -22,7 +22,7 @@ class FunctionRead implements Read<Object> {
         }
 
         if (candidates.size() != 1) {
-            throw new IllegalArgumentException("The object you supply to Reads.usingFunction must have " +
+            throw new IllegalArgumentException("The object you supply to Reads.ofFunction must have " +
                     "exactly one public instance method, but we found " + candidates);
         }
 

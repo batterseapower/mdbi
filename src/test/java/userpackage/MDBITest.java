@@ -544,7 +544,7 @@ public class MDBITest {
     public void readFunction() throws SQLException {
         m.execute(sql("insert into person (id, name) values (3, 'John')"));
 
-        assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.usingFunction(new Object() {
+        assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.ofFunction(new Object() {
             public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
         })));
     }
