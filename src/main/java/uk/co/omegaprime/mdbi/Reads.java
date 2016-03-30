@@ -223,7 +223,12 @@ public class Reads {
      * </pre>
      */
     public static Read<?> ofFunction(Object fun) {
-        return new FunctionRead(fun);
+        return new FunctionRead<>(Object.class, fun);
+    }
+
+    /** Version of {@link #ofFunction(Object)} that validates that the function returns a particular expected type */
+    public static <T> Read<T> ofFunction(Class<T> klass, Object fun) {
+        return new FunctionRead<>(klass, fun);
     }
 
     /** Mapping treating {@code Read} as a functor. */

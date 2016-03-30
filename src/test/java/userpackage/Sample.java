@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static uk.co.omegaprime.mdbi.MDBI.sql;
 
@@ -41,9 +42,11 @@ public class Sample {
         println(nullyDouble); // NaN
 
         // Batch insert is fully supported
-        final List<String> names = Arrays.asList("Fry", "Leela");
-        final List<Integer> ages = Arrays.asList(1025, 25);
-        MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(names).sql(",").$s(ages).sql(")"));
+        {
+            final List<String> names = Arrays.asList("Fry", "Leela");
+            final List<Integer> ages = Arrays.asList(1025, 25);
+            MDBI.of(conn).updateBatch(sql("insert into people (name, age) values (").$s(names).sql(",").$s(ages).sql(")"));
+        }
 
         // You can even mix batched and non-batched bits of the query:
         final List<String> moreNames = Arrays.asList("Foo", "Bar");
@@ -80,6 +83,15 @@ public class Sample {
         final String[] nameColumn = (String[])matrix[0];
         final int[] ageColumn = (int[])matrix[1];
         println(nameColumn[0] + ": " + ageColumn[1]); // Bar: 13
+
+        // Alternatively, that can be written as:
+        {
+            final MatrixBatchReadBuilder mrb = MatrixBatchReadBuilder.create();
+            final Supplier<String[]> names = mrb.add(sql("name"), String.class);
+            final Supplier<int[]> ages = mrb.addInt(sql("int"));
+            mrb.buildAndExecute(MDBI.of(conn), columns -> sql("select ", columns, " from people order by name"));
+            println(names.get()[0] + ": " + ages.get()[1]); // Bar: 13
+        }
 
         // MDBI has great support for Java primitive types, but it can also be extended with support for your own. Let's say
         // you have a bean, PersonBean, representing one row of the table. This works:

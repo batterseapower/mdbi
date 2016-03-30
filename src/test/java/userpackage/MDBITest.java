@@ -547,5 +547,13 @@ public class MDBITest {
         assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.ofFunction(new Object() {
             public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
         })));
+
+        assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.ofFunction(String.class, new Object() {
+            public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
+        })));
+
+        assertEquals("John has 3 bottles of beer", m.queryFirst(sql("select id, name from person"), Reads.ofFunction(Object.class, new Object() {
+            public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
+        })));
     }
 }
