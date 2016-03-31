@@ -104,6 +104,17 @@ public final class SQL {
 
     /** Append a SQL literal */
     public SQL sql(SQL x) {
+        final Integer size;
+        if (x.size == null) {
+            size = this.size;
+        } else if (this.size == null) {
+            size = x.size;
+        } else if (x.size.intValue() != this.size) {
+            throw new IllegalArgumentException("All collections supplied to a batch SQL statement must be of the same size, but you had both sizes " + this.size + " and " + x.size);
+        } else {
+            size = x.size;
+        }
+
         return new SQL(args.snocs(x.args), size);
     }
 
