@@ -20,6 +20,7 @@ import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
 import static uk.co.omegaprime.mdbi.MDBI.$;
+import static uk.co.omegaprime.mdbi.MDBI.$s;
 import static uk.co.omegaprime.mdbi.MDBI.sql;
 
 public class MDBITest {
@@ -200,8 +201,16 @@ public class MDBITest {
     public void updateBatch() throws SQLException {
         final List<Integer> ids = Arrays.asList(1, 2);
         final List<String> names = Arrays.asList("Max", "John");
+
         m.updateBatch(sql("insert into person (id, name) values(").$s(ids).sql(", ").$s(names).sql(")"));
         Assert.assertEquals(Arrays.asList("1Max", "2John"), m.queryList(sql("select id || name from person order by id"), String.class));
+
+        m.execute(sql("delete from person"));
+
+        // In an unlikely twist we had a bug where this way of constructing the SQL statement didn't work
+        m.updateBatch(sql("insert into person (id, name) values(", $s(ids), ", ", $s(names), ")"));
+        Assert.assertEquals(Arrays.asList("1Max", "2John"), m.queryList(sql("select id || name from person order by id"), String.class));
+
     }
 
     @Test
