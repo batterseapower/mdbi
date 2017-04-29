@@ -13,7 +13,9 @@ class PreparedStatementlike implements Statementlike {
 
     @Override
     public void execute() throws SQLException {
-        ps.execute();
+        if (ps.execute()) {
+            while (ps.getMoreResults()) {}
+        }
     }
 
     @Override

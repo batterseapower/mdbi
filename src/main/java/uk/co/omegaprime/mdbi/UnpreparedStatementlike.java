@@ -15,7 +15,9 @@ class UnpreparedStatementlike implements Statementlike {
 
     @Override
     public void execute() throws SQLException {
-        s.execute(sql);
+        if (s.execute(sql)) {
+            while (s.getMoreResults()) {}
+        }
     }
 
     @Override
