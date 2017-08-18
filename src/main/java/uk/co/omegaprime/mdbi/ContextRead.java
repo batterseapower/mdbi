@@ -1,14 +1,14 @@
 package uk.co.omegaprime.mdbi;
 
 class ContextRead<T> implements Read<T> {
-    private final Class<T> klass;
+    private final Class<? extends T> klass;
 
-    public ContextRead(Class<T> klass) {
+    public ContextRead(Class<? extends T> klass) {
         this.klass = klass;
     }
 
     @Override
-    public Class<T> getElementClass() {
+    public Class<? extends T> getElementClass() {
         return klass;
     }
 

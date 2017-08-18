@@ -179,32 +179,32 @@ public class Reads {
     };
 
     /** A {@code Read} instance that simply defers to the {@link Context} to decide how to construct an instance of the given class. */
-    public static <T> Read<T> useContext(Class<T> klass) {
+    public static <T> Read<T> useContext(Class<? extends T> klass) {
         return new ContextRead<>(klass);
     }
 
     /** Constructs a type that has only one public constructor. Constructor arguments are recursively constructed using the {@link Context}. */
-    public static <T> Read<T> tuple(Class<T> klass) {
+    public static <T> Read<T> tuple(Class<? extends T> klass) {
         return new TupleRead<T>(klass);
     }
 
     /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the context-default {@code Read} instance for the supplied classes. */
-    public static <T> Read<T> tupleWithFieldClasses(Class<T> klass, Collection<Class<?>> klasses) {
+    public static <T> Read<T> tupleWithFieldClasses(Class<? extends T> klass, Collection<Class<?>> klasses) {
         return tuple(klass, klasses.stream().map(argklass -> new ContextRead<>(argklass)).collect(Collectors.toList()));
     }
 
     /** Variadic version of {@link #tupleWithFieldClasses(Class, Collection)} */
-    public static <T> Read<T> tupleWithFieldClasses(Class<T> klass, Class<?>... klasses) {
+    public static <T> Read<T> tupleWithFieldClasses(Class<? extends T> klass, Class<?>... klasses) {
         return tupleWithFieldClasses(klass, Arrays.asList(klasses));
     }
 
     /** Constructs a type that has only one public constructor. Constructor arguments are constructed using the supplied {@code Read} instances. */
-    public static <T> Read<T> tuple(Class<T> klass, Collection<Read<?>> reads) {
+    public static <T> Read<T> tuple(Class<? extends T> klass, Collection<Read<?>> reads) {
         return new TupleRead<T>(klass, reads);
     }
 
     /** Variadic version of {@link #tuple(Class, Collection)} */
-    public static <T> Read<T> tuple(Class<T> klass, Read<?>... reads) {
+    public static <T> Read<T> tuple(Class<? extends T> klass, Read<?>... reads) {
         return tuple(klass, Arrays.asList(reads));
     }
 
@@ -227,20 +227,20 @@ public class Reads {
     }
 
     /** Version of {@link #ofFunction(Object)} that validates that the function returns a particular expected type */
-    public static <T> Read<T> ofFunction(Class<T> klass, Object fun) {
+    public static <T> Read<T> ofFunction(Class<? extends T> klass, Object fun) {
         return new FunctionRead<>(klass, fun);
     }
 
     /** Mapping treating {@code Read} as a functor. */
-    public static <T, U> Read<U> map(Class<U> klass, Class<T> readKlass, Function<T, U> f) {
+    public static <T, U> Read<U> map(Class<U> klass, Class<? extends T> readKlass, Function<T, U> f) {
         return map(klass, new ContextRead<>(readKlass), f);
     }
 
     /** Mapping treating {@code Read} as a functor. */
-    public static <T, U> Read<U> map(Class<U> klass, Read<T> read, Function<T, U> f) {
+    public static <T, U, V> Read<U> map(Class<U> klass, Read<T> read, Function<T, U> f) {
         return new Read<U>() {
             @Override
-            public Class<U> getElementClass() {
+            public Class<? extends U> getElementClass() {
                 return klass;
             }
 
@@ -300,14 +300,14 @@ public class Reads {
     }
 
     private abstract static class AbstractUnaryRead<T> implements Read<T> {
-        private final Class<T> klass;
+        private final Class<? extends T> klass;
 
-        public AbstractUnaryRead(Class<T> klass) {
+        public AbstractUnaryRead(Class<? extends T> klass) {
             this.klass = klass;
         }
 
         @Override
-        public Class<T> getElementClass() {
+        public Class<? extends T> getElementClass() {
             return klass;
         }
 
@@ -335,17 +335,17 @@ public class Reads {
      * The named bean properties are extracted from the SQL result in the order given. The value of the bean
      * property is constructed using the default {@code Read} associated for that type in the {@link Context}.
      */
-    public static <T> Read<T> bean(Class<T> klass, String... fields) {
+    public static <T> Read<T> bean(Class<? extends T> klass, String... fields) {
         return new BeanRead<>(klass, fields);
     }
 
     /** As {@link #bean(Class, String...)}, but allows you to explicitly specify the types of the fields. */
-    public static <T> Read<T> beanWithFieldClasses(Class<T> klass, Collection<String> fields, Collection<Class<?>> klasses) {
+    public static <T> Read<T> beanWithFieldClasses(Class<? extends T> klass, Collection<String> fields, Collection<Class<?>> klasses) {
         return new BeanRead<>(klass, fields, klasses.stream().map(argklass -> new ContextRead<>(argklass)).collect(Collectors.toList()));
     }
 
     /** As {@link #bean(Class, String...)}, but allows you to customize how the property values are constructed. */
-    public static <T> Read<T> bean(Class<T> klass, Collection<String> fields, Collection<Read<?>> reads) {
+    public static <T> Read<T> bean(Class<? extends T> klass, Collection<String> fields, Collection<Read<?>> reads) {
         return new BeanRead<>(klass, fields, reads);
     }
 

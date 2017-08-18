@@ -34,7 +34,7 @@ class FunctionRead<T> implements Read<T> {
     private final Object receiver;
     private final Collection<Read<?>> reads;
 
-    public FunctionRead(Class<T> klass, Object receiver) {
+    public FunctionRead(Class<? extends T> klass, Object receiver) {
         this.method = getMethod(receiver);
         this.klass = checkExtends(method.getReturnType(), klass);
         this.receiver = receiver;
@@ -45,7 +45,7 @@ class FunctionRead<T> implements Read<T> {
         method.setAccessible(true);
     }
 
-    public FunctionRead(Class<T> klass, Object receiver, Collection<Read<?>> reads) {
+    public FunctionRead(Class<? extends T> klass, Object receiver, Collection<Read<?>> reads) {
         this.method = getMethod(receiver);
         this.klass = checkExtends(method.getReturnType(), klass);
         this.receiver = receiver;
@@ -55,7 +55,7 @@ class FunctionRead<T> implements Read<T> {
         Reflection.checkReadsConformance("Method " + method, Arrays.asList(method.getParameterTypes()), reads);
     }
 
-    private static <T> Class<? extends T> checkExtends( Class<?> klass, Class<T> mustExtend) {
+    private static <T> Class<? extends T> checkExtends(Class<?> klass, Class<T> mustExtend) {
         if (!mustExtend.isAssignableFrom(klass)) {
             throw new IllegalArgumentException("Found class " + klass + " must extend supplied class " + mustExtend);
         } else {

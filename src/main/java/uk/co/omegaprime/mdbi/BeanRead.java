@@ -11,19 +11,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 class BeanRead<T> implements Read<T> {
-    private final Class<T> klass;
-    private final Constructor<T> constructor;
+    private final Class<? extends T> klass;
+    private final Constructor<? extends T> constructor;
     private final Method[] setters;
     private final Collection<Read<?>> reads;
 
-    public BeanRead(Class<T> klass, String... fields) {
+    public BeanRead(Class<? extends T> klass, String... fields) {
         this.klass = klass;
         this.constructor = Reflection.getBeanConstructor(klass);
         this.setters = Reflection.lookupBeanSetters(klass, Arrays.asList(fields));
         this.reads = Arrays.asList(this.setters).stream().map(m -> new ContextRead<>(m.getParameterTypes()[0])).collect(Collectors.toList());
     }
 
-    public BeanRead(Class<T> klass, Collection<String> fields, Collection<Read<?>> reads) {
+    public BeanRead(Class<? extends T> klass, Collection<String> fields, Collection<Read<?>> reads) {
         this.klass = klass;
         this.constructor = Reflection.getBeanConstructor(klass);
         this.setters = Reflection.lookupBeanSetters(klass, fields);
@@ -33,7 +33,7 @@ class BeanRead<T> implements Read<T> {
     }
 
     @Override
-    public Class<T> getElementClass() {
+    public Class<? extends T> getElementClass() {
         return klass;
     }
 

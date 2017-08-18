@@ -10,11 +10,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 class TupleRead<T> implements Read<T> {
-    private final Class<T> klass;
-    private final Constructor<T> constructor;
+    private final Class<? extends T> klass;
+    private final Constructor<? extends T> constructor;
     private final Collection<Read<?>> reads;
 
-    public TupleRead(Class<T> klass) {
+    public TupleRead(Class<? extends T> klass) {
         this.klass = klass;
         this.constructor = Reflection.getUniqueConstructor(klass);
         this.reads = Arrays.asList(constructor.getParameterTypes()).stream().map(ContextRead::new).collect(Collectors.toList());
@@ -22,7 +22,7 @@ class TupleRead<T> implements Read<T> {
         this.constructor.setAccessible(true);
     }
 
-    public TupleRead(Class<T> klass, Collection<Read<?>> reads) {
+    public TupleRead(Class<? extends T> klass, Collection<Read<?>> reads) {
         this.klass = klass;
         this.constructor = Reflection.getCompatibleConstructor(klass, reads.stream().map(Read::getElementClass).collect(Collectors.toList()));
         this.reads = reads;
@@ -31,7 +31,7 @@ class TupleRead<T> implements Read<T> {
     }
 
     @Override
-    public Class<T> getElementClass() {
+    public Class<? extends T> getElementClass() {
         return klass;
     }
 
