@@ -565,4 +565,15 @@ public class MDBITest {
             public String f(int id, String name) { return name + " has " + id + " bottles of beer"; }
         })));
     }
+
+    @Test
+    public void readFunctionWithTrickyGenericReturn() throws SQLException {
+        class InterestingFunction<T> {
+            public T couldBeRightType() {
+                return null;
+            }
+        }
+
+        assertEquals(null, m.queryFirst(sql("select 1"), Reads.ofFunction(Integer.class, new InterestingFunction<Integer>())));
+    }
 }

@@ -1,8 +1,7 @@
 package uk.co.omegaprime.mdbi;
 
 import javax.annotation.Nonnull;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
+import java.lang.reflect.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -36,7 +35,7 @@ class FunctionRead<T> implements Read<T> {
 
     public FunctionRead(Class<? extends T> klass, Object receiver) {
         this.method = getMethod(receiver);
-        this.klass = checkExtends(method.getReturnType(), klass);
+        this.klass = checkExtends(method.getGenericReturnType(), klass);
         this.receiver = receiver;
         this.reads = Arrays.asList(method.getParameterTypes()).stream().map(ContextRead::new).collect(Collectors.toList());
 
@@ -47,12 +46,32 @@ class FunctionRead<T> implements Read<T> {
 
     public FunctionRead(Class<? extends T> klass, Object receiver, Collection<Read<?>> reads) {
         this.method = getMethod(receiver);
-        this.klass = checkExtends(method.getReturnType(), klass);
+        this.klass = checkExtends(method.getGenericReturnType(), klass);
         this.receiver = receiver;
         this.reads = reads;
 
         method.setAccessible(true);
         Reflection.checkReadsConformance("Method " + method, Arrays.asList(method.getParameterTypes()), reads);
+    }
+
+    private static <T> Class<? extends T> checkExtends(Type type, Class<T> mustExtend) {
+        if (type instanceof Class) {
+            return checkExtends((Class)type, mustExtend);
+        } else if (type instanceof ParameterizedType) {
+            return checkExtends(((ParameterizedType)type).getRawType(), mustExtend);
+        } else if (type instanceof GenericArrayType) {
+            final GenericArrayType gat = (GenericArrayType)type;
+            if (!mustExtend.equals(Object.class) && !mustExtend.isArray()) {
+                throw new IllegalArgumentException("Found type " + gat + " must extend supplied class " + mustExtend);
+            }
+        } else {
+            // i.e. WildcardType/TypeVariable: not sure there are any sensible extra checks we can do
+        }
+
+        // In the generic case we will just assume that our method will return exactly the type that the user
+        // supplied. We will check this condition below (using Class.cast) so it's not dangerous, just prevents
+        // the error from being detected earlier.
+        return mustExtend;
     }
 
     private static <T> Class<? extends T> checkExtends(Class<?> klass, Class<T> mustExtend) {
