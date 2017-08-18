@@ -4,6 +4,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
+import java.sql.SQLException;
 import java.util.*;
 
 class Reflection {
@@ -98,7 +99,7 @@ class Reflection {
         }
     }
 
-    public static <T> T constructUnchecked(Constructor<T> constructor, Object[] arguments) {
+    public static <T> T constructUnchecked(Constructor<T> constructor, Object[] arguments) throws SQLException {
         try {
             return constructor.newInstance(arguments);
         } catch (InstantiationException e) {
@@ -110,7 +111,7 @@ class Reflection {
         }
     }
 
-    public static Object invokeUnchecked(Method method, Object receiver, Object[] arguments) {
+    public static Object invokeUnchecked(Method method, Object receiver, Object[] arguments) throws SQLException {
         try {
             return method.invoke(receiver, arguments);
         } catch (IllegalAccessException e) {
@@ -120,10 +121,14 @@ class Reflection {
         }
     }
 
-    private static RuntimeException rethrowInvocationTargetException(InvocationTargetException e) {
+    private static RuntimeException rethrowInvocationTargetException(InvocationTargetException e) throws SQLException {
         final Throwable cause = e.getCause();
         if (cause instanceof RuntimeException) {
-            return (RuntimeException)cause;
+            throw (RuntimeException)cause;
+        } else if (cause instanceof Error) {
+            throw (Error)cause;
+        } else if (cause instanceof SQLException) {
+            throw (SQLException)cause;
         } else {
             return new UndeclaredThrowableException(cause);
         }

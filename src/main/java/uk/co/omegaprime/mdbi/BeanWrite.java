@@ -43,7 +43,13 @@ class BeanWrite<T> implements Write<T> {
             public List<String> asSQL(T x) {
                 final List<String> result = new ArrayList<>();
                 for (int i = 0; i < getters.length; i++) {
-                    result.addAll(((BoundWrite<Object>) boundWrites.get(i)).asSQL(Reflection.invokeUnchecked(getters[i], x, new Object[0])));
+                    final Object o;
+                    try {
+                        o = Reflection.invokeUnchecked(getters[i], x, new Object[0]);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                    result.addAll(((BoundWrite<Object>) boundWrites.get(i)).asSQL(o));
                 }
                 return result;
             }
