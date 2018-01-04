@@ -1,9 +1,6 @@
 package userpackage;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import uk.co.omegaprime.mdbi.*;
 
 import java.math.BigDecimal;
@@ -575,5 +572,21 @@ public class MDBITest {
         }
 
         assertEquals(null, m.queryFirst(sql("select 1"), Reads.ofFunction(Integer.class, new InterestingFunction<Integer>())));
+    }
+
+    @Test
+    public void notTransactional() throws SQLException {
+        m.withTransactional(false).execute(sql("insert into person (id, name) values (3, 'John'); rollback"));
+        assertEquals(1, m.queryFirst(sql("select count(*) from person where id = 3"), Integer.class).intValue());
+    }
+
+    @Test
+    // This should fail but doesn't work because 'rollback' is not executed (SQLite doesn't support
+    // executing multiple SQL statements in one go). I couldn't find any pragma that let me test whether
+    // transactions are on, either...
+    @Ignore
+    public void transactional() throws SQLException {
+        m.withTransactional(true).execute(sql("insert into person (id, name) values (3, 'John'); rollback"));
+        assertEquals(0, m.queryFirst(sql("select count(*) from person where id = 3"), Integer.class).intValue());
     }
 }

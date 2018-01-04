@@ -45,7 +45,7 @@ public class MDBI {
 
     private final Context context;
     private final ConnectionObtainer connectionObtainer;
-    private final boolean prepared;
+    private final boolean prepared, transactional;
     private final Supplier<Retry> retryPolicy;
 
     // TODO: support generated keys? Bit awkward because we need to know we need the feature when we prepare the stmt.
@@ -66,21 +66,32 @@ public class MDBI {
     }
 
     private MDBI(Context context, ConnectionObtainer connectionObtainer) {
-        this(context, connectionObtainer, true, Retries::deadlocks);
+        this(context, connectionObtainer, true, true, Retries::deadlocks);
     }
 
     private MDBI(Context context, ConnectionObtainer connectionObtainer,
-                 boolean prepared, Supplier<Retry> retryPolicy) {
+                 boolean prepared, boolean transactional, Supplier<Retry> retryPolicy) {
         this.context = context;
         this.connectionObtainer = connectionObtainer;
         this.prepared = prepared;
+        this.transactional = transactional;
         this.retryPolicy = retryPolicy;
     }
 
     /** Should we use {@link PreparedStatement}s to execute SQL (the default)? Or should we instead construct SQL strings for use with {@link Statement}? */
     public boolean isPrepared() { return prepared; }
     public MDBI withPrepared(boolean prepared) {
-        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
+        return new MDBI(context, connectionObtainer, prepared, transactional, retryPolicy);
+    }
+
+    /**
+     * Should we use execute the SQL statement in a transaction?
+     * <p>
+     * Note that if transactions are disabled then the retry policy ({@link #getRetryPolicy()}) will never be used.
+     */
+    public boolean isTransactional() { return transactional; }
+    public MDBI withTransactional(boolean transactional) {
+        return new MDBI(context, connectionObtainer, prepared, transactional, retryPolicy);
     }
 
     /**
@@ -89,20 +100,25 @@ public class MDBI {
      * <p>
      * For more about what how to construct a policy, see the documentation of {@link Retry}.
      * <p>
-     * <b>Important note:</b> the retry policy will only be used when executing a query against a
-     * connection with no open transaction. i.e. it will always come into play if you constructed this
-     * {@code MDBI} using a {@code DataSource}, but won't be used if you constructed it from a {@code Connection}
-     * with autocommit set to false. You might think this is a strange restriction, but if we didn't have it
-     * then users of transactions might get just <i>part</i> of their transaction retried, which would be really surprising.
+     * <b>Important note:</b> the retry policy will only be used if both:
+     * <ol>
+     *     <li>Transactions are enabled in MDBI (the default)</li>
+     *     <li>You executing a query against a
+     *         connection with no open transaction. i.e. it will always come into play if you constructed this
+     *         {@code MDBI} using a {@code DataSource}, but won't be used if you constructed it from a {@code Connection}
+     *         with autocommit set to false. You might think this is a strange restriction, but if we didn't have it
+     *         then users of transactions might get just <i>part</i> of their transaction retried, which would be really surprising.
+     *     </li>
+     * </ol>
      */
     public Supplier<Retry> getRetryPolicy() { return retryPolicy; }
     public MDBI withRetryPolicy(Supplier<Retry> retryPolicy) {
-        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
+        return new MDBI(context, connectionObtainer, prepared, transactional, retryPolicy);
     }
 
     public Context getContext() { return context; }
     public MDBI withContext(Context context) {
-        return new MDBI(context, connectionObtainer, prepared, retryPolicy);
+        return new MDBI(context, connectionObtainer, prepared, transactional, retryPolicy);
     }
 
     /** Executes a query and throws away the result, if any. */
@@ -249,9 +265,8 @@ public class MDBI {
         }
     }
 
-    @SuppressWarnings("TryWithIdenticalCatches")
     private <T> T retry(Connection c, SQLAction<T> act) throws SQLException {
-        if (!c.getAutoCommit()) {
+        if (!transactional || !c.getAutoCommit()) {
             // Already in transaction, we can't safely retry because failure of the SQL action we
             // are trying to do might cause rollback. Example: what if we execute these 3 one after another:
             //   update tab set x = 1
