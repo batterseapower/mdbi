@@ -20,7 +20,12 @@ public class Transactionally {
 
         @Override
         public void close() throws SQLException {
-            if (!success) {
+            if (conn.getAutoCommit()) {
+                // rollback() docs say it should be used only when auto-commit mode has been disabled
+                // If the transaction has failed for some reason, auto-commit may have been disabled
+                // behind our back, so check for that. Doing this also helps make close() idempotent.
+                return;
+            } else if (!success) {
                 conn.rollback();
             }
             conn.setAutoCommit(true);
