@@ -95,6 +95,18 @@ public class BatchReads {
         return new MapBatchRead<>(LinkedHashMap::new, BatchReads::appendListHack, readKey, (Read<List<V>>)(Read)Reads.map(List.class, readValue, (V v) -> new ArrayList<V>(Collections.singletonList(v))));
     }
 
+    /** Return the {@code ResultSet} as a {@code NavigableMap}, allowing multiple values for any given key */
+    @SuppressWarnings("unchecked")
+    public static <K, V> BatchRead<NavigableMap<K, List<V>>> asNavigableMultiMap(Class<K> keyClass, Class<V> valueClass) {
+        return asNavigableMultiMap(new ContextRead<>(keyClass), new ContextRead<>(valueClass));
+    }
+
+    /** Return the {@code ResultSet} as a {@code NavigableMap}, allowing multiple values for any given key */
+    @SuppressWarnings("unchecked")
+    public static <K, V> BatchRead<NavigableMap<K, List<V>>> asNavigableMultiMap(Read<K> readKey, Read<V> readValue) {
+        return new MapBatchRead<>(TreeMap::new, BatchReads::appendListHack, readKey, (Read<List<V>>)(Read)Reads.map(List.class, readValue, (V v) -> new ArrayList<V>(Collections.singletonList(v))));
+    }
+
     // Bit dodgy because correctness depends crucially on how we are called
     private static <K, V> List<V> appendListHack(K key, List<V> od, List<V> nw) {
         if (nw.size() != 1) throw new IllegalStateException("This really shouldn't happen..");
